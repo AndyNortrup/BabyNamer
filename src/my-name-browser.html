@@ -1,6 +1,5 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="../bower_components/paper-card/paper-card.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="suggested-name-card.html">
 
 <dom-module id="my-name-browser">
   <!-- Defines the element's style and local DOM -->
@@ -14,26 +13,14 @@
     </style>
 
     <h1>Suggested Names</h1>
-    <paper-card heading="Alexander">
-      <div class="card-content">
-        Greek Meaning: The name Alexander is a Greek baby name. In Greek the meaning of the name Alexander is: Defender of men. Alexander the Great was a 4th century Macedonian king for whom the Egyptian city of Alexandria is named. Eight popes and three Russian emperors have been named Alexander.
-      </div>
-      <div class="card-actions">
-        <paper-button on-click="handleYes">Yes</paper-button>
-        <paper-button on-click="handleNo">No</paper-button>
-      </div>
-    </paper-card>
+    <suggested-name-card>
+
+    </suggested-name-card>
   </template>
   <!-- Creates the element's prototype and registers it -->
   <script>
     Polymer({
-      is: 'my-name-browser',
-      handleYes: function() {
-        alert("Yes!");
-      },
-      handleNo: function() {
-        alert("No!")
-      }
+      is: 'my-name-browser'
     });
   </script>
 </dom-module>
