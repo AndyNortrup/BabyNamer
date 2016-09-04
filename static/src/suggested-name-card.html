@@ -1,0 +1,75 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<dom-module id="suggested-name-card">
+  <!-- Defines the element's style and local DOM -->
+  <template>
+    <iron-ajax
+      id="nameRequest"
+      auto
+      url="http://www.behindthename.com/api/random.php?usage=eng&key=an468794&number=1"
+      handle-as="document"
+      on-response="putName"
+      debounce-duration="300"></iron-ajax>
+    <iron-ajax
+      id="nameDetails"
+      url="http://www.behindthename.com/api/lookup.php?key=an468794"
+      handle-as="document"
+      on-response="fillDetails"
+      debounce-duration="300"></iron-ajax>
+    <paper-card id="nameCard">
+      <div id="nameCardContent" class="card-content">
+
+      </div>
+      <div class="card-actions" >
+
+        <paper-button on-click="sendToMaybe">Yes</paper-button>
+        <paper-button on-click="sendToReject">No</paper-button>
+
+      </div>
+    </paper-card>
+
+  </template>
+  <!-- Creates the element's prototype and registers it -->
+  <script>
+    Polymer({
+      is: 'suggested-name-card',
+      putName: function(r) {
+        resp = r.detail.response;
+        list = resp.querySelectorAll('name');
+        this.$.nameDetails.params = {"name" : list[0].innerHTML }
+        this.$.nameCard.heading = list[0].innerHTML
+        this.$.nameDetails.generateRequest()
+      },
+      sendToMaybe: function() {
+        this.$.nameRequest.generateRequest();
+      },
+      sendToReject: function() {
+        this.$.nameRequest.generateRequest();
+      },
+      fillDetails: function(r) {
+        resp = r.detail.response;
+
+        gender = resp.querySelectorAll('gender')
+        var content
+        if (gender[0].innerHTML == 'f') {
+            content = '<b>Girl</b><br>'
+        } else {
+          content = '<b>Boy</b><br>'
+        }
+
+        var usage = resp.querySelectorAll('usage_full')
+        content = content + "Origin: "
+        for (i=0; i<usage.length; i++) {
+          content = content + " " + usage[i].innerHTML
+          if (i < usage.length - 1) {
+            content = content + ", "
+          }
+        }
+        this.$.nameCardContent.innerHTML = content
+      }
+    });
+  </script>
+</dom-module>
