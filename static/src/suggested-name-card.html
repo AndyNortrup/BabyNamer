@@ -9,28 +9,26 @@
     <iron-ajax
       id="nameRequest"
       auto
-      url="http://www.behindthename.com/api/random.php?usage=eng&key=an468794&number=1"
-      handle-as="document"
-      on-response="putName"
+      url="/api/random-name"
+      handle-as="json"
+      last-response={{response}}
       debounce-duration="300"></iron-ajax>
     <iron-ajax
-      id="nameDetails"
-      url="http://www.behindthename.com/api/lookup.php?key=an468794"
-      handle-as="document"
-      on-response="fillDetails"
-      debounce-duration="300"></iron-ajax>
-    <paper-card id="nameCard">
-      <div id="nameCardContent" class="card-content">
-
-      </div>
+      url = "/api/sendToMaybe/{{response.Name}}"
+      id="maybeRequest"></iron-ajax>
+    <paper-card id="nameCard" heading={{response.Name}}>
+    <div id="nameCardContent" class="card-content">
+      <ul>
+      <template is="dom-repeat" items="{{response.Usages}}">
+        <li><b>{{item.UsageGender}}</b> {{item.UsageFull}}
+      </template>
+    </ul>
+    </div>
       <div class="card-actions" >
-
         <paper-button on-click="sendToMaybe">Yes</paper-button>
         <paper-button on-click="sendToReject">No</paper-button>
-
       </div>
     </paper-card>
-
   </template>
   <!-- Creates the element's prototype and registers it -->
   <script>
@@ -39,12 +37,13 @@
       putName: function(r) {
         resp = r.detail.response;
         list = resp.querySelectorAll('name');
-        this.$.nameDetails.params = {"name" : list[0].innerHTML }
+        //this.$.nameDetails.params = {"name" : list[0].innerHTML }
         this.$.nameCard.heading = list[0].innerHTML
-        this.$.nameDetails.generateRequest()
+        //this.$.nameDetails.generateRequest()
       },
       sendToMaybe: function() {
         this.$.nameRequest.generateRequest();
+        this.$.maybeRequest.generateRequest();
       },
       sendToReject: function() {
         this.$.nameRequest.generateRequest();
