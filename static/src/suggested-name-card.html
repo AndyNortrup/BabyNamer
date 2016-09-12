@@ -14,10 +14,20 @@
       last-response={{response}}
       debounce-duration="300"></iron-ajax>
     <iron-ajax
-      url = "/api/sendToMaybe/{{response.Name}}"
-      id="maybeRequest"></iron-ajax>
+      url = "/api/make-decision/{{response.Name}}/yes"
+      id="yesDecsion"
+      handle-as="json"
+      last-response={{response}}></iron-ajax>
+    <iron-ajax
+      url = "/api/make-decision/{{response.Name}}/no"
+      id="noDecsion"
+      handle-as="json"
+      last-response={{response}}></iron-ajax>
     <paper-card id="nameCard" heading={{response.Name}}>
     <div id="nameCardContent" class="card-content">
+      <template is="dom-if" if="{{_isRecommended(response)}}">
+        <iron-icon src="../images/favorite.png"></iron-icon>
+      </template>
       <ul>
       <template is="dom-repeat" items="{{response.Usages}}">
         <li><b>{{item.UsageGender}}</b> {{item.UsageFull}}
@@ -34,40 +44,17 @@
   <script>
     Polymer({
       is: 'suggested-name-card',
-      putName: function(r) {
-        resp = r.detail.response;
-        list = resp.querySelectorAll('name');
-        //this.$.nameDetails.params = {"name" : list[0].innerHTML }
-        this.$.nameCard.heading = list[0].innerHTML
-        //this.$.nameDetails.generateRequest()
-      },
       sendToMaybe: function() {
-        this.$.nameRequest.generateRequest();
-        this.$.maybeRequest.generateRequest();
+        this.$.yesDecsion.generateRequest();
       },
       sendToReject: function() {
-        this.$.nameRequest.generateRequest();
+        this.$.noDecsion.generateRequest()
       },
-      fillDetails: function(r) {
-        resp = r.detail.response;
-
-        gender = resp.querySelectorAll('gender')
-        var content
-        if (gender[0].innerHTML == 'f') {
-            content = '<b>Girl</b><br>'
-        } else {
-          content = '<b>Boy</b><br>'
+      _isRecommended: function(r) {
+        if (r.ApprovedBy != "" || r.RecommendedBy != "") {
+          return true;
         }
-
-        var usage = resp.querySelectorAll('usage_full')
-        content = content + "Origin: "
-        for (i=0; i<usage.length; i++) {
-          content = content + " " + usage[i].innerHTML
-          if (i < usage.length - 1) {
-            content = content + ", "
-          }
-        }
-        this.$.nameCardContent.innerHTML = content
+        return false;
       }
     });
   </script>

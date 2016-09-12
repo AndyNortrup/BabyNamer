@@ -1,0 +1,8 @@
+indexes:
+
+  - kind: NameDetails
+    ancestor: no
+    properties:
+      - name: ApprovedBy
+      - name: RejectedBy
+        direction: desc
