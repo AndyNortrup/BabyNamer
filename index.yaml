@@ -6,3 +6,8 @@ indexes:
       - name: ApprovedBy
       - name: RejectedBy
         direction: desc
+
+  - kind: NameDetails
+    properties:
+    - name: Name
+    - name: RejectedBy
