@@ -1,0 +1,33 @@
+<html><head><link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+</head><body><dom-module id="suggested-name-card">
+  
+  <template>
+    <iron-ajax id="nameRequest" auto="" url="/api/random-name" handle-as="json" last-response="{{response}}" debounce-duration="300"></iron-ajax>
+    <iron-ajax url="/api/make-decision/{{response.Name}}/yes" id="yesDecsion" handle-as="json" last-response="{{response}}"></iron-ajax>
+    <iron-ajax url="/api/make-decision/{{response.Name}}/no" id="noDecsion" handle-as="json" last-response="{{response}}"></iron-ajax>
+    <paper-card id="nameCard" heading="{{response.Name}}">
+    <div id="nameCardContent" class="card-content">
+      <template is="dom-if" if="{{_isRecommended(response)}}">
+        <iron-icon src="../images/favorite.png"></iron-icon>
+      </template>
+      <ul>
+      <template is="dom-repeat" items="{{response.Usages}}">
+        <li><b>{{item.UsageGender}}</b> {{item.UsageFull}}
+      </li></template>
+    </ul>
+    </div>
+      <div class="card-actions">
+        <paper-button on-click="sendToMaybe">Yes</paper-button>
+        <paper-button on-click="sendToReject">No</paper-button>
+      </div>
+    </paper-card>
+  </template>
+
+  
+  <script>Polymer({is:"suggested-name-card",sendToMaybe:function(){this.$.yesDecsion.generateRequest()},sendToReject:function(){this.$.noDecsion.generateRequest()},_isRecommended:function(e){return""!=e.ApprovedBy||""!=e.RecommendedBy}});</script>
+</dom-module>
+</body></html>

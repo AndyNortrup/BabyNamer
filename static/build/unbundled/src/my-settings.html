@@ -1,0 +1,44 @@
+<html><head><link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-toggle-button/paper-toggle-button.html">
+
+</head><body><dom-module id="my-settings">
+  
+  <template>
+    <style>
+      :host {
+        display: block;
+
+        padding: 16px;
+      }
+    </style>
+
+    <h1>Settings</h1>
+    <h2>Origins</h2>
+    <iron-ajax auto="" url="/api/get-supported-usages" handle-as="json" last-response="{{supported-usages}}"></iron-ajax>
+    <iron-ajax id="updateRequest" auto="" url="{{usage-url}}" handle-as="json"></iron-ajax>
+
+      <trhead>
+          </trhead><table>
+        <tbody><tr>
+            <th>Language</th><th>Description</th>
+          </tr>
+        
+        <template is="dom-repeat" items="{{supported-usages}}">
+
+          <tr>
+            <td>
+              <paper-toggle-button id="{{item.Code}}" on-change="changeSetting">
+                {{item.Plain}}
+              </paper-toggle-button>
+            </td>
+            <td>{{item.Description}}</td>
+          </tr>
+        </template>
+      </tbody></table>
+  </template>
+  
+  <script>Polymer({is:"my-settings",properties:{usageurl:{notify:!0,type:String}},changeSetting:function(e){this.$.updateRequest.url="/api/update-usage/"+e.model.item.Code+"/"+e.target.checked,this.$.updateRequest.generateRequest(),console.log("Submitted: "+this.usageurl)}});</script>
+</dom-module>
+</body></html>

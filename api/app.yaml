@@ -1,0 +1,14 @@
+application: baby-namer-142422
+version: alpha
+runtime: go
+api_version: go1
+module: api
+
+handlers:
+- url: .*
+  script: _go_app
+  login: required
+  auth_fail_action: redirect
+
+nobuild_files:
+- vendor

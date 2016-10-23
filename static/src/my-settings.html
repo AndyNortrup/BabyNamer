@@ -1,0 +1,68 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-toggle-button/paper-toggle-button.html">
+
+<dom-module id="my-settings">
+  <!-- Defines the element's style and local DOM -->
+  <template>
+    <style>
+      :host {
+        display: block;
+
+        padding: 16px;
+      }
+    </style>
+
+    <h1>Settings</h1>
+    <h2>Origins</h2>
+    <iron-ajax
+    auto
+    url="/api/get-supported-usages"
+    handle-as="json"
+    last-response="{{supported-usages}}"></iron-ajax>
+    <iron-ajax
+    id="updateRequest"
+    auto
+    url="{{usage-url}}"
+    handle-as="json"></iron-ajax>
+
+      <table>
+        <trhead>
+          <tr>
+            <th>Language</th><th>Description</th>
+          </tr>
+        </trhead>
+        <template is="dom-repeat" items="{{supported-usages}}">
+
+          <tr>
+            <td>
+              <paper-toggle-button
+                id="{{item.Code}}"
+                on-change="changeSetting">
+                {{item.Plain}}
+              </paper-toggle-button>
+            </td>
+            <td>{{item.Description}}</td>
+          </tr>
+        </template>
+      </table>
+  </template>
+  <!-- Creates the element's prototype and registers it -->
+  <script>
+    Polymer({
+      is: 'my-settings',
+      properties: {
+        usageurl: {
+          notify: true,
+          type: String
+        }
+      },
+      changeSetting: function(e) {
+        this.$.updateRequest.url = "/api/update-usage/" + e.model.item.Code + "/" + e.target.checked;
+        this.$.updateRequest.generateRequest()
+        console.log("Submitted: " + this.usageurl);
+      }
+    });
+  </script>
+</dom-module>

@@ -3,6 +3,7 @@
   "shell": "src/my-app.html",
   "fragments": [
     "src/my-name-browser.html",
+    "src/my-settings.html",
     "src/my-view404.html"
   ],
   "sourceGlobs": [
