@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"sort"
-
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
@@ -18,26 +16,12 @@ type NameOrigin struct {
 }
 
 func getAllUsages(w http.ResponseWriter, r *http.Request) {
+	r.Body.Close()
+
 	ctx := appengine.NewContext(r)
-	user := user.Current(ctx)
-	userUsages := getAllUserUsages(user.Email, ctx)
-	allUsages := getNameOrigins()
-	var output UsageList
+	user := user.User(ctx)
 
-	for k := range allUsages {
-		if userUsages[k] != nil {
-			output = append(output, userUsages[k])
-		} else {
-			output = append(output,
-				&SettingUsage{
-					NameOrigin: allUsages[k],
-					Enabled:    false,
-					User:       user.Email,
-				})
-		}
-	}
-
-	sort.Sort(output)
+	output := usageListFromDatastore(ctx, &user)
 
 	b, err := json.Marshal(output)
 	if err != nil {

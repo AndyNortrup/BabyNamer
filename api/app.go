@@ -38,6 +38,7 @@ func init() {
 }
 
 func getNameHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	getName(w, r)
 }
 

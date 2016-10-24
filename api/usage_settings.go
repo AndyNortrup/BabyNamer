@@ -22,7 +22,7 @@ type SettingUsage struct {
 }
 
 func NewSettingUsage(code string, enabled bool, user string) *SettingUsage {
-	origin := NameOrigin{Code: code}
+	origin := getNameOrigins()[code]
 	return &SettingUsage{NameOrigin: origin, Enabled: enabled, User: user}
 }
 
@@ -38,44 +38,18 @@ func updateUsage(w http.ResponseWriter, r *http.Request) {
 	user := user.Current(ctx)
 
 	setting := NewSettingUsage(code, enabled, user.Email)
-	setting.setUsage(ctx)
-}
 
-func (setting SettingUsage) setUsage(ctx context.Context) {
-	//get key that matches existing setting for that usage
-	key := setting.getSettingsKey(ctx)
+	log.Infof(ctx, "Recieved request to change usage=%v to %v for %v",
+		setting.Code, setting.Enabled, setting.User)
 
-	//write new value to that key
-	datastore.Put(ctx, key, setting)
-	log.Infof(ctx, "Updated setting key: %v", key)
-}
-
-func (setting SettingUsage) getSettingsKey(ctx context.Context) *datastore.Key {
-	query := datastore.NewQuery(SettingUsageEntityType)
-	query.Filter("User =", setting.User).
-		Filter("Code =", setting.Code).
-		KeysOnly()
-
-	for t := query.Run(ctx); ; {
-		key, err := t.Next(&SettingUsage{})
-
-		//There is no key, so this is the first time we've set this value
-		if err == datastore.Done {
-			return datastore.NewIncompleteKey(ctx, SettingUsageEntityType, nil)
-		}
-		if err != nil {
-			log.Errorf(ctx, "Failed to get settings keys: %v", err)
-			return datastore.NewIncompleteKey(ctx, SettingUsageEntityType, nil)
-		}
-		//Get out of the loop we have our key
-		return key
-	}
+	mgr := NewSettingUsageDatastoreManager(ctx)
+	mgr.setUsage(setting)
 }
 
 func getAllUserUsages(user string, ctx context.Context) map[string]*SettingUsage {
 	result := make(map[string]*SettingUsage)
 	query := datastore.NewQuery(SettingUsageEntityType).
-		Filter("User =", user)
+		Filter("User =", user).Filter("Enabled =", true)
 
 	setting := &SettingUsage{}
 	for t := query.Run(ctx); ; {
@@ -90,5 +64,6 @@ func getAllUserUsages(user string, ctx context.Context) map[string]*SettingUsage
 			result[setting.Code] = setting
 		}
 	}
+	log.Infof(ctx, "Enabled user settings for %v: %v", user, result)
 	return result
 }
