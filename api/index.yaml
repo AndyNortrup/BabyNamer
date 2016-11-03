@@ -11,3 +11,9 @@ indexes:
     properties:
     - name: Name
     - name: RejectedBy
+
+  - kind: SettingUsage
+    properties:
+    - name: Code
+    - name: User
+    - name: Enabled

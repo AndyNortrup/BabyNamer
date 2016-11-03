@@ -19,9 +19,9 @@ func getAllUsages(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	ctx := appengine.NewContext(r)
-	user := user.User(ctx)
+	user := user.Current(ctx)
 
-	output := usageListFromDatastore(ctx, &user)
+	output := usageListFromDatastore(ctx, user.Email)
 
 	b, err := json.Marshal(output)
 	if err != nil {

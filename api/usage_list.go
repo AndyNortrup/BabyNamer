@@ -1,10 +1,9 @@
 package main
 
 import (
-	"context"
 	"sort"
 
-	"google.golang.org/appengine/user"
+	"golang.org/x/net/context"
 )
 
 type UsageList []*SettingUsage
@@ -21,18 +20,18 @@ func (list UsageList) Swap(i, j int) {
 	list[i], list[j] = list[j], list[i]
 }
 
-func usageListFromDatastore(ctx context.Context, user *user.User) UsageList {
+func usageListFromDatastore(ctx context.Context, email string) UsageList {
 
-	userUsages := getAllUserUsages(user.Email, ctx)
+	userUsages := getAllUserUsages(email, ctx)
 	allUsages := getNameOrigins()
 
-	return combineUsageLists(userUsages, allUsages, user)
+	return combineUsageLists(userUsages, allUsages, email)
 }
 
 func combineUsageLists(
 	userUsages map[string]*SettingUsage,
 	allUsages map[string]NameOrigin,
-	user *user.User) UsageList {
+	email string) UsageList {
 
 	output := UsageList{}
 
@@ -44,7 +43,7 @@ func combineUsageLists(
 				&SettingUsage{
 					NameOrigin: allUsages[k],
 					Enabled:    false,
-					User:       user.Email,
+					User:       email,
 				})
 		}
 	}
