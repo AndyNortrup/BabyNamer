@@ -17,3 +17,8 @@ indexes:
     - name: Code
     - name: User
     - name: Enabled
+
+  - kind: NameDetails
+    properties:
+    - name: RejectedBy
+    - name: ApprovedBy

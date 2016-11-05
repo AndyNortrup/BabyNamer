@@ -1,35 +1,25 @@
 package main
 
 import (
+	"net/http"
 	"testing"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/aetest"
-	"google.golang.org/appengine/user"
 )
 
 func TestGetRecommendedName(t *testing.T) {
 
 	userEmail := "me@example.com"
 
-	inst, err := aetest.NewInstance(
-		&aetest.Options{StronglyConsistentDatastore: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer inst.Close()
-
-	req, err := inst.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	user := &user.User{Email: userEmail}
-	aetest.Login(user, req)
+	// user := &user.User{Email: userEmail}
+	// aetest.Login(user, req)
+	//
+	req := newTestRequest(t)
 
 	ctx := appengine.NewContext(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	t.Logf("State of ctx: %#v", ctx)
 
 	gen := NewNameGenerator(ctx)
 
@@ -53,7 +43,7 @@ func TestGetRecommendedName(t *testing.T) {
 	}
 	//put a test value into the store
 
-	err = gen.addNameToStore(undesired)
+	err := gen.addNameToStore(undesired)
 
 	if err != nil {
 		t.Fatalf("Failed to add name to store: %v", err)
@@ -77,4 +67,21 @@ func TestGetRecommendedName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func newTestRequest(t *testing.T) *http.Request {
+	inst, err := aetest.NewInstance(
+		&aetest.Options{StronglyConsistentDatastore: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inst.Close()
+
+	req, err := inst.NewRequest(http.MethodGet, "/", nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return req
 }

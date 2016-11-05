@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const NameDetailsEntityType string = "NameDetails"
+const EntityTypeNameDetails string = "NameDetails"
 
 type BabyName struct {
 	Name   string `xml:"names>name"`
@@ -28,6 +28,7 @@ func init() {
 	// api.HandleFunc("/update-usage/{code}/{status:(true|false)}", updateUsage)
 
 	r.HandleFunc("/", namesPage)
+	r.HandleFunc("/short-list", handleShortList)
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("templates/css"))))
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("templates/js"))))
 	r.PathPrefix("/fonts/").Handler(http.StripPrefix("/fonts/", http.FileServer(http.Dir("templates/fonts"))))

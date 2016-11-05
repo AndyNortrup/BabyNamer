@@ -63,7 +63,7 @@ func (gen *NameGenerator) getName(previous string) (*NameDetails, error) {
 //getRecommendedName gets a list of names from the datastore that were
 // recommended by a different user, and have not been rejected by any user
 func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, error) {
-	query := datastore.NewQuery(NameDetailsEntityType).
+	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("ApprovedBy =", "").
 		Filter("RejectedBy =", "")
 
@@ -158,7 +158,7 @@ func (gen *NameGenerator) addNameToStore(details *NameDetails) error {
 		return errors.New("Name already exists in datastore.")
 	}
 
-	key = datastore.NewIncompleteKey(gen.ctx, NameDetailsEntityType, nil)
+	key = datastore.NewIncompleteKey(gen.ctx, EntityTypeNameDetails, nil)
 	if _, err := datastore.Put(gen.ctx, key, details); err != nil {
 		log.Warningf(gen.ctx, "Error writing name to datastore: %v", err)
 		return err
@@ -176,7 +176,7 @@ func (gen *NameGenerator) randomUsage() string {
 //getKeyForName returns the datastore key for a given name value. Use this to
 // get a key so you update a name's information rather than write a new copy.
 func (gen *NameGenerator) getKeyForName(details *NameDetails) (*datastore.Key, error) {
-	t := datastore.NewQuery(NameDetailsEntityType).
+	t := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("Name =", details.Name).
 		Run(gen.ctx)
 
@@ -200,7 +200,7 @@ func (gen *NameGenerator) getKeyForName(details *NameDetails) (*datastore.Key, e
 func (gen *NameGenerator) isRejected(details *NameDetails) bool {
 
 	//Get all of the instnace of the name that have been rejected by someone.
-	query := datastore.NewQuery(NameDetailsEntityType).
+	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("Name =", details.Name).
 		Filter("RejectedBy >", "")
 

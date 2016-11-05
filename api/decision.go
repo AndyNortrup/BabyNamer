@@ -1,8 +1,8 @@
 package main
 
 import (
-	"html/template"
 	"net/http"
+	"net/url"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
@@ -16,24 +16,16 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	user := user.Current(ctx)
 
 	gen := NewNameGenerator(ctx)
+	name, decision := getQueryParam(r.URL)
 
-	name := r.URL.Query().Get("name")
-	var decision bool
-
-	if r.URL.Query().Get("decision") == "yes" {
-		decision = true
-	} else {
-		decision = false
-	}
-
-	updateNameRecommendations(name, user.Email, decision, ctx)
+	updateNameRecommendations(name, user.String(), decision, ctx)
 
 	newName, err := gen.getName(name)
 	if err != nil {
 		log.Errorf(ctx, "Error getting name: %v", err)
 	}
 
-	t, err := template.ParseFiles("templates/name-suggestor.html")
+	t, err := getNameTemplate()
 	if err != nil {
 		log.Errorf(ctx, "Failed to parse template file: %v", err)
 	}
@@ -42,4 +34,17 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf(ctx, "Failed to Execute template: %v", err)
 	}
+}
+
+func getQueryParam(url *url.URL) (string, bool) {
+
+	name := url.Query().Get("name")
+	var decision bool
+
+	if url.Query().Get("decision") == "yes" {
+		decision = true
+	} else {
+		decision = false
+	}
+	return name, decision
 }

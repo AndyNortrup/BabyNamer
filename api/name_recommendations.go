@@ -12,7 +12,7 @@ func updateNameRecommendations(name, username string,
 	ctx context.Context) error {
 
 	//Get the name from the datastore
-	query := datastore.NewQuery(NameDetailsEntityType).
+	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("Name =", name)
 
 	for t := query.Run(ctx); ; {
