@@ -65,18 +65,20 @@ func (gen *NameGenerator) getName(previous string) (*NameDetails, error) {
 func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, error) {
 	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("ApprovedBy =", "").
+		Filter("RecommendedBy <", "").
 		Filter("RejectedBy =", "")
 
 	for t := query.Run(gen.ctx); ; {
 		details := &NameDetails{}
 		_, err := t.Next(details)
 		if err == datastore.Done {
+			log.Infof(gen.ctx, "No recommended names found.")
 			return nil, nil
-		}
-		if err != nil {
+		} else if err != nil {
+			log.Infof(gen.ctx, "Error retriving recommended names: %v", err)
 			return nil, err
-		}
-		if details.RecommendedBy != gen.user && previous != details.Name {
+		} else if details.RecommendedBy != gen.user && previous != details.Name {
+			log.Infof(gen.ctx, "Returning recommended name: %v", details)
 			return details, nil
 		}
 	}

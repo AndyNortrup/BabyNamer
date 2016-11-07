@@ -22,3 +22,9 @@ indexes:
     properties:
     - name: RejectedBy
     - name: ApprovedBy
+
+  - kind: NameDetails
+    properties:
+    - name: RejectedBy
+    - name: ApprovedBy
+    - name: RecommendedBy
