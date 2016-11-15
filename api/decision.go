@@ -13,12 +13,16 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	ctx := appengine.NewContext(r)
-	user := user.Current(ctx)
+	username := user.Current(ctx)
 
 	gen := NewNameGenerator(ctx)
 	name, decision := getQueryParam(r.URL)
 
-	updateNameRecommendations(name, user.String(), decision, ctx)
+	nameMgr := DatastoreNameManager{
+		username: username.String(),
+		name:     name,
+	}
+	nameMgr.updateNameRecommendations(decision)
 
 	newName, err := gen.getName(name)
 	if err != nil {
