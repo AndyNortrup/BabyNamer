@@ -1,33 +1,9 @@
 package main
 
-import (
-	"encoding/json"
-	"net/http"
-
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/user"
-)
-
 type NameOrigin struct {
 	Code        string `datastore:"Code"`
 	Plain       string `datastore:"Plain"`
 	Description string `datastore:"Description"`
-}
-
-func getAllUsages(w http.ResponseWriter, r *http.Request) {
-	r.Body.Close()
-
-	ctx := appengine.NewContext(r)
-	user := user.Current(ctx)
-
-	output := usageListFromDatastore(ctx, user.Email)
-
-	b, err := json.Marshal(output)
-	if err != nil {
-		log.Warningf(ctx, "Unable to marshal usages to json: %v", err)
-	}
-	w.Write(b)
 }
 
 func getNameOrigins() map[string]NameOrigin {

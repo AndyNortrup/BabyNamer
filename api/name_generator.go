@@ -68,6 +68,11 @@ func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, err
 		Filter("RecommendedBy <", "").
 		Filter("RejectedBy =", "")
 
+	url, urlErr := user.LogoutURL(gen.ctx, "/")
+	if urlErr != nil {
+		log.Errorf(gen.ctx, "Error building logout URL: %v", url)
+	}
+
 	for t := query.Run(gen.ctx); ; {
 		details := &NameDetails{}
 		_, err := t.Next(details)

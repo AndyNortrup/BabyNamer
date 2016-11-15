@@ -20,12 +20,12 @@ func (list UsageList) Swap(i, j int) {
 	list[i], list[j] = list[j], list[i]
 }
 
-func usageListFromDatastore(ctx context.Context, email string) UsageList {
+func NewUsageList(ctx context.Context, user string) UsageList {
 
-	userUsages := getAllUserUsages(email, ctx)
+	userUsages := getAllUserUsages(user, ctx)
 	allUsages := getNameOrigins()
 
-	return combineUsageLists(userUsages, allUsages, email)
+	return combineUsageLists(userUsages, allUsages, user)
 }
 
 func combineUsageLists(
