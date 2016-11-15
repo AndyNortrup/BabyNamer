@@ -79,3 +79,45 @@ func (u *DatastoreNameManager) recordDecision(key *datastore.Key,
 	_, err = datastore.Put(u.ctx, key, details)
 	return err
 }
+
+func (u *DatastoreNameManager) addNameToStore(details *NameDetails) error {
+
+	if details.Name == "" {
+		return errors.New("Can't write blank name to datastore.")
+	}
+
+	//Check if the name already exists by searching for it.
+	key, _ := u.getKeyForName(details)
+	if key != nil {
+		return errors.New("Name already exists in datastore.")
+	}
+
+	key = datastore.NewIncompleteKey(u.ctx, EntityTypeNameDetails, nil)
+	if _, err := datastore.Put(u.ctx, key, details); err != nil {
+		log.Warningf(u.ctx, "Error writing name to datastore: %v", err)
+		return err
+	}
+	return nil
+}
+
+//getKeyForName returns the datastore key for a given name value. Use this to
+// get a key so you update a name's information rather than write a new copy.
+func (u *DatastoreNameManager) getKeyForName(details *NameDetails) (*datastore.Key, error) {
+	t := datastore.NewQuery(EntityTypeNameDetails).
+		Filter("Name =", details.Name).
+		Run(u.ctx)
+
+	for {
+		results := &NameDetails{}
+		key, err := t.Next(results)
+
+		if err == datastore.Done {
+			return nil, nil
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return key, nil
+	}
+}

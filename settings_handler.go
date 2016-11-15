@@ -11,7 +11,7 @@ import (
 func handleSettings(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := appengine.NewContext(r)
-	user := user.Current(ctx)
+	username := user.Current(ctx)
 
 	settingManager := NewSettingUsageDatastoreManager(ctx)
 	settingManager.setUsage(&SettingUsage{
@@ -20,8 +20,8 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		User:       "test",
 	})
 
-	usages := NewUsageList(ctx, user.String())
-	log.Debugf(ctx, "Usage List for user: %v", user.String())
+	usages := NewUsageList(ctx, username.String())
+	log.Debugf(ctx, "Usage List for user: %v", username.String())
 
 	t, err := getSettingTemplate()
 	if err != nil {

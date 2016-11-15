@@ -35,9 +35,9 @@ func updateUsage(w http.ResponseWriter, r *http.Request) {
 		log.Errorf(ctx, "Failed to convert status to boolean: %v", err)
 	}
 
-	user := user.Current(ctx)
+	username := user.Current(ctx)
 
-	setting := NewSettingUsage(code, enabled, user.Email)
+	setting := NewSettingUsage(code, enabled, username.Email)
 
 	log.Infof(ctx, "Recieved request to change usage=%v to %v for %v",
 		setting.Code, setting.Enabled, setting.User)

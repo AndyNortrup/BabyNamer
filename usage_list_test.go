@@ -21,7 +21,7 @@ func TestCombineUsageLists(t *testing.T) {
 	result := combineUsageLists(settingUsage, allUsages, "user@email.com")
 
 	if result[0].Enabled == false {
-		t.Logf("Failed to take setting from user settings.")
+		t.Log("Failed to take setting from user settings.")
 		t.Fail()
 	}
 

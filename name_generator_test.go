@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/urlfetch"
 )
 
 func TestGetRecommendedName(t *testing.T) {
@@ -21,9 +20,13 @@ func TestGetRecommendedName(t *testing.T) {
 	ctx := appengine.NewContext(req)
 
 	gen := &NameGenerator{
-		ctx:    ctx,
-		user:   userEmail,
-		client: urlfetch.Client(ctx),
+		ctx:  ctx,
+		user: userEmail,
+	}
+
+	mgr := &DatastoreNameManager{
+		ctx:      ctx,
+		username: userEmail,
 	}
 
 	testCases := []*NameDetails{
@@ -42,7 +45,7 @@ func TestGetRecommendedName(t *testing.T) {
 	}
 
 	for _, name := range testCases {
-		gen.addNameToStore(name)
+		mgr.addNameToStore(name)
 	}
 
 	if err != nil {
