@@ -11,6 +11,8 @@ import (
 func TestGetRecommendedName(t *testing.T) {
 
 	userEmail := "me@example.com"
+	otherEmail := "user@test.com"
+	desiredName := "recommendedByPartner"
 
 	req, err := inst.NewRequest(http.MethodGet, "/", nil)
 	if err != nil {
@@ -24,27 +26,24 @@ func TestGetRecommendedName(t *testing.T) {
 		client: urlfetch.Client(ctx),
 	}
 
-	desired := &NameDetails{
-		Name:          "test",
-		RecommendedBy: "user@test.com",
+	testCases := []*NameDetails{
+		{
+			Name:          desiredName,
+			RecommendedBy: otherEmail,
+		},
+		{
+			Name:       "reject",
+			RejectedBy: otherEmail,
+		},
+		{
+			Name:          "recommendedBySelf",
+			RecommendedBy: userEmail,
+		},
 	}
 
-	gen.addNameToStore(desired)
-
-	rejected := &NameDetails{
-		Name:       "reject",
-		RejectedBy: "user@test.com",
+	for _, name := range testCases {
+		gen.addNameToStore(name)
 	}
-
-	gen.addNameToStore(rejected)
-
-	undesired := &NameDetails{
-		Name:          "banannas",
-		RecommendedBy: userEmail,
-	}
-	//put a test value into the store
-
-	err = gen.addNameToStore(undesired)
 
 	if err != nil {
 		t.Fatalf("Failed to add name to store: %v", err)
@@ -57,11 +56,11 @@ func TestGetRecommendedName(t *testing.T) {
 		t.Fatalf("Error getting recommended name: %v", err)
 	}
 	if ndResult == nil {
-		t.Fatalf("nil result returned.")
+		t.Fatal("nil result returned.")
 	}
-	if ndResult.Name != desired.Name {
+	if ndResult.Name != desiredName {
 		t.Logf("Incorrect name returned. Expected: %v Recieved: %v",
-			desired.Name, desired.Name)
+			desiredName, ndResult.Name)
 		t.Fail()
 	}
 

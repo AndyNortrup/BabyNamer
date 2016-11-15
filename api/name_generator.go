@@ -64,8 +64,8 @@ func (gen *NameGenerator) getName(previous string) (*NameDetails, error) {
 // recommended by a different user, and have not been rejected by any user
 func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, error) {
 	query := datastore.NewQuery(EntityTypeNameDetails).
+		Filter("RecommendedBy >", "").
 		Filter("ApprovedBy =", "").
-		Filter("RecommendedBy <", "").
 		Filter("RejectedBy =", "")
 
 	url, urlErr := user.LogoutURL(gen.ctx, "/")
