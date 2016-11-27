@@ -1,8 +1,0 @@
-application: baby-namer-142422
-
-dispatch:
-  - url: "*/api/*"
-    module: api
-
-  - url: "baby-namer-142422.appspot.com/"
-    module: default
