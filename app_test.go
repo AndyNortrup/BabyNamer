@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"google.golang.org/appengine/aetest"
+	"google.golang.org/appengine/datastore"
+
+	"golang.org/x/net/context"
 )
 
 var inst aetest.Instance
@@ -24,4 +27,16 @@ func tearDown() {
 	if inst != nil {
 		inst.Close()
 	}
+}
+
+func deleteAllNameDetails(ctx context.Context) error {
+	q := datastore.NewQuery(EntityTypeNameDetails).KeysOnly()
+	details := []NameDetails{}
+	keys, err := q.GetAll(ctx, details)
+	if err != nil {
+		return err
+	}
+
+	err = datastore.DeleteMulti(ctx, keys)
+	return err
 }
