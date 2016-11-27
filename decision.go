@@ -18,11 +18,11 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	gen := NewNameGenerator(ctx)
 	name, decision := getQueryParam(r.URL)
 
-	nameMgr := DatastoreNameManager{
-		username: username.String(),
-		name:     name,
+	nameMgr := NewDatastoreNameManager(ctx, username.String())
+
+	if name != "" {
+		nameMgr.updateNameRecommendations(name, decision)
 	}
-	nameMgr.updateNameRecommendations(decision)
 
 	newName, err := gen.getName(name)
 	if err != nil {
@@ -36,7 +36,7 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 
 	err = t.Execute(w, newName)
 	if err != nil {
-		log.Errorf(ctx, "Failed to Execute template: %v", err)
+		log.Errorf(ctx, "Failed to Execute template: %v\tName: %v", err, newName)
 	}
 }
 

@@ -7,12 +7,14 @@ import (
 
 	"golang.org/x/net/context"
 
+	"net/http"
+
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
-	"net/http"
 )
 
 const randomNameEndpoint string = "http://www.behindthename.com/api/random.php?"
+const nameDetailsEndpoint string = "http://www.behindthename.com/api/lookup.php?"
 
 type RandomNameService struct {
 	ctx    context.Context
@@ -45,15 +47,21 @@ func (u *RandomNameService) getNameFromService() (*NameDetails, error) {
 	decoder := xml.NewDecoder(nameReq.Body)
 	name := &BabyName{}
 	err = decoder.Decode(name)
+	if err != nil {
+		log.Errorf(u.ctx, "Failed to decode name from service: %v", err)
+	}
 
 	log.Infof(u.ctx, "Recieved '%#v' from service.", name)
-	return u.getNameDetails(name)
+	details, err := u.getNameDetails(name)
+	if err != nil {
+		log.Errorf(u.ctx, "Error retriving name details: %v", err)
+	}
+	return details, err
 }
 
 func (gen *RandomNameService) getNameDetails(name *BabyName) (*NameDetails, error) {
 	details := &NameDetails{}
-	address := "http://www.behindthename.com/api/lookup.php?key=an468794&name=" +
-		name.Name
+	address := nameDetailsEndpoint + "key=an468794&name=" + name.Name
 	nameDetailsReq, err := gen.client.Get(address)
 
 	if err != nil {
@@ -79,8 +87,15 @@ func (gen *RandomNameService) getNameDetails(name *BabyName) (*NameDetails, erro
 		ctx: gen.ctx,
 	}
 
-	mgr.addNameToStore(details)
 	log.Infof(gen.ctx, "Name details recieved for '%#v'", details)
+	err = mgr.addNameToStore(details)
+
+	if err == DuplicateNameError {
+		log.Infof(mgr.ctx, err.Error())
+	} else if err != nil {
+		log.Errorf(mgr.ctx, "Failed to write name to datastore: %v", err)
+		return nil, err
+	}
 
 	return details, nil
 }

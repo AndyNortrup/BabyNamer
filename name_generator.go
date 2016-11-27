@@ -75,23 +75,25 @@ func (gen *NameGenerator) getRandomName() (*NameDetails, error) {
 
 		randomName, err := service.getNameFromService()
 		if err != nil || randomName.Name == "" {
-			log.Warningf(gen.ctx, "Error retriving random name: %v", err)
+			log.Warningf(gen.ctx, "Error retriving random name: %v\nRandom Name: %#v", err, randomName)
 		}
 
 		//Check the datastore for an existing copy of this name.
-		datastoreNameMgr := &DatastoreNameManager{
-			username: gen.user,
-			name:     randomName.Name,
-			ctx:      gen.ctx,
-		}
+		mgr := NewDatastoreNameManager(gen.ctx, gen.user)
 
-		currentListing, _, err := datastoreNameMgr.getNameFromDatastore()
+		currentListing, _, err := mgr.getNameFromDatastore(randomName.Name)
 
-		if err == nil {
+		if err != nil {
+			log.Errorf(gen.ctx, "Name not found in current datastore: %v", err)
+			return randomName, nil
+		} else {
 			//Check if we have already made a decision
 			isDuplicateDecision := checkDuplicateDecision(currentListing, gen.user)
 			if isDuplicateDecision == nil {
+				log.Infof(gen.ctx, "The name %v has not been decided by %v", currentListing.Name, gen.user)
 				reject = false
+			} else {
+				log.Debugf(gen.ctx, "The name %v has been decided by %v", currentListing.Name, gen.user)
 			}
 		}
 

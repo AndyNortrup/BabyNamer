@@ -4,26 +4,37 @@ import (
 	"golang.org/x/net/context"
 
 	"errors"
+
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 )
 
 type DatastoreNameManager struct {
-	name, username string
-	ctx            context.Context
+	username string
+	ctx      context.Context
 }
 
-func (u *DatastoreNameManager) getNameFromDatastore() (*NameDetails, *datastore.Key, error) {
+var DuplicateNameError = errors.New("Name already exists in datastore.")
+
+func NewDatastoreNameManager(ctx context.Context, username string) *DatastoreNameManager {
+	return &DatastoreNameManager{
+		username: username,
+		ctx:      ctx,
+	}
+}
+
+func (u *DatastoreNameManager) getNameFromDatastore(name string) (*NameDetails, *datastore.Key, error) {
 	//Get the name from the datastore
+	log.Debugf(u.ctx, "Getting name from datastore: %v", name)
 	query := datastore.NewQuery(EntityTypeNameDetails).
-		Filter("Name =", u.name)
+		Filter("Name =", name)
 
 	for t := query.Run(u.ctx); ; {
 		details := &NameDetails{}
 		key, err := t.Next(details)
 
 		if err == datastore.Done {
-			log.Infof(u.ctx, "Couldn't find name in datastore.")
+			log.Infof(u.ctx, "Couldn't find name in datastore: %v", name)
 			return nil, nil, err
 		}
 		if err != nil {
@@ -33,14 +44,12 @@ func (u *DatastoreNameManager) getNameFromDatastore() (*NameDetails, *datastore.
 			return details, key, nil
 		}
 	}
-
-	return nil, nil, errors.New("Unable to locate name in Datastore.")
 }
 
-func (u *DatastoreNameManager) updateNameRecommendations(
+func (u *DatastoreNameManager) updateNameRecommendations(name string,
 	decision bool) error {
 
-	record, key, err := u.getNameFromDatastore()
+	record, key, err := u.getNameFromDatastore(name)
 
 	if err != nil {
 		return errors.New("Unable to locate name in datastore.")
@@ -89,13 +98,15 @@ func (u *DatastoreNameManager) addNameToStore(details *NameDetails) error {
 	//Check if the name already exists by searching for it.
 	key, _ := u.getKeyForName(details)
 	if key != nil {
-		return errors.New("Name already exists in datastore.")
+		return DuplicateNameError
 	}
 
 	key = datastore.NewIncompleteKey(u.ctx, EntityTypeNameDetails, nil)
 	if _, err := datastore.Put(u.ctx, key, details); err != nil {
 		log.Warningf(u.ctx, "Error writing name to datastore: %v", err)
 		return err
+	} else {
+		log.Infof(u.ctx, "Added name to the datastore: %v", details.Name)
 	}
 	return nil
 }
