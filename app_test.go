@@ -8,6 +8,8 @@ import (
 	"google.golang.org/appengine/datastore"
 
 	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"net/http"
 )
 
 var inst aetest.Instance
@@ -39,4 +41,9 @@ func deleteAllNameDetails(ctx context.Context) error {
 
 	err = datastore.DeleteMulti(ctx, keys)
 	return err
+}
+
+func newTestContext() context.Context {
+	req, _ := inst.NewRequest(http.MethodGet, "/", nil)
+	return appengine.NewContext(req)
 }

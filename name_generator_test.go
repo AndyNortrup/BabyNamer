@@ -1,11 +1,19 @@
 package main
 
 import (
-	"net/http"
+	"golang.org/x/net/context"
 	"testing"
-
-	"google.golang.org/appengine"
 )
+
+var names = []*NameDetails{
+	{Name: "Recommended", RecommendedBy: "user1", Usages: []Usage{desiredUsage}},
+	{Name: "Rejected", RecommendedBy: "user1", Usages: []Usage{unwantedUsage}},
+	{Name: "Undecided Correct Usage", Usages: []Usage{desiredUsage}},
+	{Name: "Undecided Wrong Usage", Usages: []Usage{unwantedUsage}},
+}
+
+var desiredUsage = Usage{UsageFull: "desiredUsage"}
+var unwantedUsage = Usage{UsageFull: "unwanted"}
 
 func TestGetRecommendedName(t *testing.T) {
 
@@ -13,11 +21,7 @@ func TestGetRecommendedName(t *testing.T) {
 	otherEmail := "user@test.com"
 	desiredName := "recommendedByPartner"
 
-	req, err := inst.NewRequest(http.MethodGet, "/", nil)
-	if err != nil {
-		t.Fatalf("Unable to create request for GetRecommendedName: %v", err)
-	}
-	ctx := appengine.NewContext(req)
+	ctx := newTestContext()
 
 	gen := &NameGenerator{
 		ctx:  ctx,
@@ -45,11 +49,12 @@ func TestGetRecommendedName(t *testing.T) {
 	}
 
 	for _, name := range testCases {
-		mgr.addNameToStore(name)
-	}
+		err := mgr.addNameToStore(name)
 
-	if err != nil {
-		t.Fatalf("Failed to add name to store: %v", err)
+		if err != nil {
+			t.Fatalf("Failed to add name to store: %v", err)
+		}
+
 	}
 
 	//test that we get that value back
@@ -71,4 +76,58 @@ func TestGetRecommendedName(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	cleanupDataStore(ctx, t)
+
+}
+
+func TestGetUndecdiedName(t *testing.T) {
+	ctx := newTestContext()
+	username := "user1"
+
+	addUndecidedNameData(username, ctx, t)
+
+	gen := NewNameGenerator(ctx, username)
+	result, err := gen.getUndecidedName(desiredUsage)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	evaluateUndecidedNameResults(result, t)
+
+	cleanupDataStore(ctx, t)
+
+}
+
+func addUndecidedNameData(username string, ctx context.Context, t *testing.T) {
+
+	mgr := NewDatastoreNameManager(ctx, username)
+
+	for _, name := range names {
+		err := mgr.addNameToStore(name)
+		if err != nil {
+			deleteAllNameDetails(ctx)
+			t.Fatalf("Failed to add names to datastore: %v", err)
+		}
+	}
+}
+
+func evaluateUndecidedNameResults(result *NameDetails, t *testing.T) {
+
+	if result == nil {
+		t.Log("No name returned.")
+		t.FailNow()
+	}
+
+	if result.Name != names[2].Name {
+		t.Logf("Expected: %v\nRecieved: %v", result, names[2])
+		t.Fail()
+	}
+}
+
+func cleanupDataStore(ctx context.Context, t *testing.T) {
+	err := deleteAllNameDetails(ctx)
+	if err != nil {
+		t.Fatalf("Failed to delete name details: %v", err)
+	}
 }

@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"math/rand"
-	"time"
 
 	"golang.org/x/net/context"
 
@@ -30,9 +28,10 @@ func NewRandomNameService(ctx context.Context) *RandomNameService {
 	return service
 }
 
-func (u *RandomNameService) getNameFromService() (*NameDetails, error) {
+func (u *RandomNameService) getNameFromService(usage string) (*NameDetails, error) {
+
 	addr := randomNameEndpoint +
-		"usage=" + u.randomUsage() +
+		"usage=" + usage +
 		"&key=an468794&number=1&gender=f"
 	log.Infof(u.ctx, "Name request API: %v", addr)
 	nameReq, err := u.client.Get(addr)
@@ -98,13 +97,6 @@ func (gen *RandomNameService) getNameDetails(name *BabyName) (*NameDetails, erro
 	}
 
 	return details, nil
-}
-
-func (gen *RandomNameService) randomUsage() string {
-	usages := []string{"eng", "iri", "sco", "fre", "wel"}
-
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	return usages[r.Intn(len(usages)-1)]
 }
 
 // convertGenderCode converts f/m/mf to Girl, Boy, Either

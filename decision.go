@@ -15,7 +15,7 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 	username := user.Current(ctx)
 
-	gen := NewNameGenerator(ctx)
+	gen := NewNameGenerator(ctx, username.String())
 	name, decision := getQueryParam(r.URL)
 
 	nameMgr := NewDatastoreNameManager(ctx, username.String())
