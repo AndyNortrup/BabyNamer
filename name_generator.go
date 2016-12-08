@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 import (
 	"golang.org/x/net/context"
@@ -28,6 +28,15 @@ func (gen *NameGenerator) getName(previous string) (*NameDetails, error) {
 
 	if name != nil && name.Name != "" {
 		log.Infof(gen.ctx, "Returning recommended name: %v", name.Name)
+		return name, nil
+	}
+
+	rndUsage := usage.NewUsageGenerator(gen.ctx, gen.user).RandomUsageCode()
+	usage := &usage.Usage{UsageFull: usage.GetNameOrigins()[rndUsage].Plain}
+	name, err = gen.getUndecidedName(usage)
+
+	if name != nil && err == nil {
+		log.Infof(gen.ctx, "Returning undecided name: %v", name.Name)
 		return name, nil
 	}
 
@@ -69,7 +78,7 @@ func (gen *NameGenerator) getRandomName() (*NameDetails, error) {
 
 	for reject {
 
-		rndUsage := usageGen.RandomUsage()
+		rndUsage := usageGen.RandomUsageCode()
 
 		randomName, err := service.getNameFromService(rndUsage)
 		if err != nil || randomName.Name == "" {
@@ -102,7 +111,7 @@ func (gen *NameGenerator) getRandomName() (*NameDetails, error) {
 
 // getUndecidedName finds a name in the datastore that has not been recommended or rejected.
 // Returns nil, nil if there are no names that meet this criteria.
-func (gen *NameGenerator) getUndecidedName(usage Usage) (*NameDetails, error) {
+func (gen *NameGenerator) getUndecidedName(usage *usage.Usage) (*NameDetails, error) {
 
 	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("RecommendedBy = ", "").

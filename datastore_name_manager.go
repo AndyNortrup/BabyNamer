@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 import (
 	"golang.org/x/net/context"
@@ -76,13 +76,9 @@ func (u *DatastoreNameManager) recordDecision(key *datastore.Key,
 
 	if decision {
 		//Check if this has already been updated
-		if details.RecommendedBy == "" {
-			details.RecommendedBy = u.username
-		} else {
-			details.ApprovedBy = u.username
-		}
+		details.Approve(u.username)
 	} else {
-		details.RejectedBy = u.username
+		details.Reject(u.username)
 	}
 
 	_, err = datastore.Put(u.ctx, key, details)

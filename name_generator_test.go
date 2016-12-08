@@ -1,19 +1,29 @@
-package main
+package babynamer
 
 import (
+	"github.com/AndyNortrup/baby-namer/usage"
 	"golang.org/x/net/context"
 	"testing"
 )
 
 var names = []*NameDetails{
-	{Name: "Recommended", RecommendedBy: "user1", Usages: []Usage{desiredUsage}},
-	{Name: "Rejected", RecommendedBy: "user1", Usages: []Usage{unwantedUsage}},
-	{Name: "Undecided Correct Usage", Usages: []Usage{desiredUsage}},
-	{Name: "Undecided Wrong Usage", Usages: []Usage{unwantedUsage}},
+	{Name: "Recommended",
+		Decision: Decision{
+			RecommendedBy: "user1",
+		},
+		Usages: []usage.Usage{desiredUsage},
+	},
+	{Name: "Rejected",
+		Decision: Decision{
+			RecommendedBy: "user1",
+		},
+		Usages: []usage.Usage{unwantedUsage}},
+	{Name: "Undecided Correct Usage", Usages: []usage.Usage{desiredUsage}},
+	{Name: "Undecided Wrong Usage", Usages: []usage.Usage{unwantedUsage}},
 }
 
-var desiredUsage = Usage{UsageFull: "desiredUsage"}
-var unwantedUsage = Usage{UsageFull: "unwanted"}
+var desiredUsage = usage.Usage{UsageFull: "desiredUsage"}
+var unwantedUsage = usage.Usage{UsageFull: "unwanted"}
 
 func TestGetRecommendedName(t *testing.T) {
 
@@ -35,16 +45,22 @@ func TestGetRecommendedName(t *testing.T) {
 
 	testCases := []*NameDetails{
 		{
-			Name:          desiredName,
-			RecommendedBy: otherEmail,
+			Name: desiredName,
+			Decision: Decision{
+				RecommendedBy: otherEmail,
+			},
 		},
 		{
-			Name:       "reject",
-			RejectedBy: otherEmail,
+			Name: "reject",
+			Decision: Decision{
+				RejectedBy: otherEmail,
+			},
 		},
 		{
-			Name:          "recommendedBySelf",
-			RecommendedBy: userEmail,
+			Name: "recommendedBySelf",
+			Decision: Decision{
+				RecommendedBy: userEmail,
+			},
 		},
 	}
 
@@ -87,7 +103,7 @@ func TestGetUndecdiedName(t *testing.T) {
 	addUndecidedNameData(username, ctx, t)
 
 	gen := NewNameGenerator(ctx, username)
-	result, err := gen.getUndecidedName(desiredUsage)
+	result, err := gen.getUndecidedName(&desiredUsage)
 
 	if err != nil {
 		t.Fatal(err)

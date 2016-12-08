@@ -1,4 +1,4 @@
-package main
+package usage
 
 type NameOrigin struct {
 	Code        string `datastore:"Code"`
@@ -6,7 +6,7 @@ type NameOrigin struct {
 	Description string `datastore:"Description"`
 }
 
-func getNameOrigins() map[string]NameOrigin {
+func GetNameOrigins() map[string]NameOrigin {
 	result := make(map[string]NameOrigin)
 
 	origins := []NameOrigin{

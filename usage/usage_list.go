@@ -1,4 +1,4 @@
-package main
+package usage
 
 import (
 	"sort"
@@ -23,7 +23,7 @@ func (list UsageList) Swap(i, j int) {
 func NewUsageList(ctx context.Context, user string) UsageList {
 
 	userUsages := getAllUserUsages(user, ctx)
-	allUsages := getNameOrigins()
+	allUsages := GetNameOrigins()
 
 	return combineUsageLists(userUsages, allUsages, user)
 }

@@ -18,9 +18,19 @@ func NewUsageGenerator(ctx context.Context, user string) *UsageGenerator {
 	}
 }
 
-func (gen *UsageGenerator) RandomUsage() string {
+func (gen *UsageGenerator) RandomUsageCode() string {
 	usages := []string{"eng", "iri", "sco", "fre", "wel"}
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	return usages[r.Intn(len(usages)-1)]
+}
+
+func (gen *UsageGenerator) RandomOrigin() NameOrigin {
+	return GetNameOrigins()[gen.RandomUsageCode()]
+}
+
+func (gen *UsageGenerator) RandomUsage() *Usage {
+	code := gen.RandomUsageCode()
+	origin := GetNameOrigins()[code]
+	return &Usage{UsageFull: origin.Plain}
 }

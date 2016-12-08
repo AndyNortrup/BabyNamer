@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 import (
 	"google.golang.org/appengine"
@@ -16,9 +16,9 @@ func TestGetShortList(t *testing.T) {
 	ctx := appengine.NewContext(req)
 
 	names := []NameDetails{
-		{Name: "Alpha", RecommendedBy: "one", ApprovedBy: "Two"},
-		{Name: "Bravo", RecommendedBy: "one", RejectedBy: "Two"},
-		{Name: "Charlie", RecommendedBy: "one", ApprovedBy: "Two"},
+		{Name: "Alpha", Decision: Decision{RecommendedBy: "one", ApprovedBy: "Two"}},
+		{Name: "Bravo", Decision: Decision{RecommendedBy: "one", RejectedBy: "Two"}},
+		{Name: "Charlie", Decision: Decision{RecommendedBy: "one", ApprovedBy: "Two"}},
 	}
 
 	for _, name := range names {

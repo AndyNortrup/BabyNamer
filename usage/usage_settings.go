@@ -1,4 +1,4 @@
-package main
+package usage
 
 import (
 	"net/http"
@@ -22,7 +22,7 @@ type SettingUsage struct {
 }
 
 func NewSettingUsage(code string, enabled bool, user string) *SettingUsage {
-	origin := getNameOrigins()[code]
+	origin := GetNameOrigins()[code]
 	return &SettingUsage{NameOrigin: origin, Enabled: enabled, User: user}
 }
 

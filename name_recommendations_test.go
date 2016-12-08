@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 import "testing"
 
@@ -9,10 +9,10 @@ func TestDuplicateDecisions(t *testing.T) {
 	user := "user"
 	otherUser := "otherUser"
 	names := []*NameDetails{
-		{Name: "Approved", ApprovedBy: user},
-		{Name: "Rejected", RejectedBy: user},
-		{Name: "RecommendedBy", RecommendedBy: user},
-		{Name: "Good", RecommendedBy: otherUser},
+		{Name: "Approved", Decision: Decision{ApprovedBy: user}},
+		{Name: "Rejected", Decision: Decision{RejectedBy: user}},
+		{Name: "RecommendedBy", Decision: Decision{RecommendedBy: user}},
+		{Name: "Good", Decision: Decision{RecommendedBy: otherUser}},
 	}
 
 	results := []bool{true, true, true, false}

@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 import "html/template"
 

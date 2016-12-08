@@ -1,4 +1,4 @@
-package main
+package babynamer
 
 //checkDuplicateDecision prevents the same user for redering judgement on a name more than once.
 func checkDuplicateDecision(details *NameDetails, username string) error {
