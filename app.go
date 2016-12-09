@@ -13,7 +13,7 @@ type BabyName struct {
 	Gender string
 }
 
-func init() {
+func Run() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", namesPage)

@@ -105,7 +105,8 @@ func (gen *RandomNameService) convertGenderCode(in string) string {
 		return "Girl"
 	} else if in == "m" {
 		return "Boy"
-	} else {
+	} else if in == "mf" {
 		return "Either"
 	}
+	return ""
 }
