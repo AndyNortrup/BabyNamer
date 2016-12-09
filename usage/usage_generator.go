@@ -11,10 +11,9 @@ type UsageGenerator struct {
 	user string
 }
 
-func NewUsageGenerator(ctx context.Context, user string) *UsageGenerator {
+func NewUsageGenerator(ctx context.Context) *UsageGenerator {
 	return &UsageGenerator{
-		ctx:  ctx,
-		user: user,
+		ctx: ctx,
 	}
 }
 
