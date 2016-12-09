@@ -75,7 +75,7 @@ func (gen *NameGenerator) getRandomName() (*NameDetails, error) {
 	reject := true
 
 	service := NewRandomNameService(gen.ctx)
-	usageGen := usage.NewUsageGenerator(gen.ctx, gen.user)
+	usageGen := usage.NewUsageGenerator(gen.ctx)
 
 	for reject {
 
@@ -137,7 +137,7 @@ func (gen *NameGenerator) getUndecidedName(usage *usage.Usage) (*NameDetails, er
 }
 
 func (gen *NameGenerator) getUsage() *usage.Usage {
-	rndUsage := usage.NewUsageGenerator(gen.ctx, gen.user).RandomUsageCode()
+	rndUsage := usage.NewUsageGenerator(gen.ctx).RandomUsageCode()
 	return &usage.Usage{UsageFull: usage.GetNameOrigins()[rndUsage].Plain}
 }
 
