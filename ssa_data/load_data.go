@@ -81,7 +81,7 @@ func readLines(file *os.File) ([][]string, error) {
 // The line array has three fields:
 // [0] = Name
 // [1] = Gender (M/F)
-// [2] = Number of occurnaces that year
+// [2] = Number of occurrences that year
 
 func convertLinesToStat(lines [][]string, year int, out chan<- *Name) {
 	var m, f int
@@ -121,14 +121,19 @@ func receiveNames(in <-chan *Name, out chan<- map[string]*Name) {
 
 func addNameToMasterList(names map[string]*Name, name *Name) map[string]*Name {
 
-	if names[name.Name] == nil {
-		names[name.Name] = name
+	key := makeNameKey(name)
+	if names[key] == nil {
+		names[key] = name
 	} else {
-		update := names[name.Name]
+		update := names[key]
 		for _, stat := range name.Stats {
 			update.addStat(stat)
-			names[name.Name] = update
+			names[key] = update
 		}
 	}
 	return names
+}
+
+func makeNameKey(name *Name) string {
+	return name.Name + "::" + name.Gender
 }
