@@ -3,6 +3,7 @@ package babynamer
 import (
 	"golang.org/x/net/context"
 
+	"github.com/AndyNortrup/baby-namer/ssa_data"
 	"github.com/AndyNortrup/baby-namer/usage"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
@@ -20,29 +21,11 @@ func NewNameGenerator(ctx context.Context, username string) *NameGenerator {
 	return gen
 }
 
-func (gen *NameGenerator) getName(previous string) (*NameDetails, error) {
-	name, err := gen.getRecommendedName(previous)
-	if err != nil {
-		return &NameDetails{}, err
-	}
+func (gen *NameGenerator) getName(previous string) (*ssa_data.Name, error) {
+	//Get a name that has been recommended
 
-	if name != nil && name.Name != "" {
-		log.Infof(gen.ctx, "Returning recommended name: %v", name.Name)
-		return name, nil
-	}
-
-	use := gen.getUsage()
-	name, err = gen.getUndecidedName(use)
-
-	if name != nil && err == nil {
-		log.Infof(gen.ctx, "Returning undecided name: %v", name.Name)
-		return name, nil
-	} else if err != nil {
-		log.Errorf(gen.ctx, "Error getting undecided name: %v", err)
-	}
-
-	log.Infof(gen.ctx, "Returning random name")
-	return gen.getRandomName()
+	//Get a random name if nothing else
+	return gen.getRandomName(ssa_data.FemaleFilter)
 }
 
 //getRecommendedName gets a list of names from the datastore that were
@@ -71,43 +54,8 @@ func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, err
 
 //getRandomName makes repeated calls to the random name service until it finds
 // one that the current user has not previously make a decision on.
-func (gen *NameGenerator) getRandomName() (*NameDetails, error) {
-	reject := true
-
-	service := NewRandomNameService(gen.ctx)
-	usageGen := usage.NewUsageGenerator(gen.ctx)
-
-	for reject {
-
-		rndUsage := usageGen.RandomUsageCode()
-
-		randomName, err := service.getNameFromService(rndUsage)
-		if err != nil || randomName.Name == "" {
-			log.Warningf(gen.ctx, "Error retriving random name: %v\nRandom Name: %#v", err, randomName)
-		}
-
-		//Check the datastore for an existing copy of this name.
-		mgr := NewDatastoreNameManager(gen.ctx, gen.user)
-
-		currentListing, _, err := mgr.getNameFromDatastore(randomName.Name)
-
-		if err != nil {
-			log.Errorf(gen.ctx, "Name not found in current datastore: %v", err)
-			return randomName, nil
-		} else {
-			//Check if we have already made a decision
-			isDuplicateDecision := checkDuplicateDecision(currentListing, gen.user)
-			if isDuplicateDecision == nil {
-				log.Infof(gen.ctx, "The name %v has not been decided by %v", currentListing.Name, gen.user)
-				reject = false
-			} else {
-				log.Debugf(gen.ctx, "The name %v has been decided by %v", currentListing.Name, gen.user)
-			}
-		}
-
-	}
-	return nil, nil
-
+func (gen *NameGenerator) getRandomName(gender ssa_data.Gender) (*ssa_data.Name, error) {
+	return ssa_data.GetRandomName(gen.ctx, gender)
 }
 
 // getUndecidedName finds a name in the datastore that has not been recommended or rejected.

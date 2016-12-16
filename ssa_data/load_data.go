@@ -12,7 +12,7 @@ import (
 
 var wg sync.WaitGroup
 
-func LoadNames() map[string]*Name {
+func loadNames() map[string]*Name {
 
 	dir := "names"
 	files, err := ioutil.ReadDir(dir)
@@ -90,10 +90,10 @@ func convertLinesToStat(lines [][]string, year int, out chan<- *Name) {
 		occurrence := extractOccurrences(line)
 		if line[1] == "M" {
 			m++
-			name.addStat(NewSSANameStat(year, m, occurrence))
+			name.addStat(NewNameStat(year, m, occurrence))
 		} else {
 			f++
-			name.addStat(NewSSANameStat(year, f, occurrence))
+			name.addStat(NewNameStat(year, f, occurrence))
 		}
 		out <- name
 	}
@@ -121,7 +121,8 @@ func receiveNames(in <-chan *Name, out chan<- map[string]*Name) {
 
 func addNameToMasterList(names map[string]*Name, name *Name) map[string]*Name {
 
-	key := makeNameKey(name)
+	key := name.makeNameKey()
+
 	if names[key] == nil {
 		names[key] = name
 	} else {
@@ -132,8 +133,4 @@ func addNameToMasterList(names map[string]*Name, name *Name) map[string]*Name {
 		}
 	}
 	return names
-}
-
-func makeNameKey(name *Name) string {
-	return name.Name + "::" + name.Gender
 }

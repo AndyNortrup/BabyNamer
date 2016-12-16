@@ -1,13 +1,13 @@
 package ssa_data
 
-type SSANameStat struct {
+type Stat struct {
 	Occurrences int
 	Year        int
 	Rank        int
 }
 
-func NewSSANameStat(year, rank, occurances int) *SSANameStat {
-	return &SSANameStat{
+func NewNameStat(year, rank, occurances int) *Stat {
+	return &Stat{
 		Year:        year,
 		Rank:        rank,
 		Occurrences: occurances,

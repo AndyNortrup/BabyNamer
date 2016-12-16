@@ -1,27 +1,39 @@
 package ssa_data
 
-import "time"
+import (
+	"math/rand"
+	"time"
+)
 
 type Name struct {
 	Name   string
 	Gender string
-	Stats  map[int]*SSANameStat
+	Random float32
+	Stats  map[int]*Stat `datastore:"-"`
 }
 
 func NewName(name, gender string) *Name {
 	result := &Name{
 		Name:   name,
 		Gender: gender,
+		Random: randomFloat(),
 	}
-	result.Stats = make(map[int]*SSANameStat)
+	result.Stats = make(map[int]*Stat)
 	return result
 }
 
-func (name *Name) addStat(stat *SSANameStat) {
+func randomFloat() float32 {
+	return rand.New(rand.NewSource(time.Now().Unix())).Float32()
+}
+
+func (name *Name) addStat(stat *Stat) {
+	if name.Stats == nil {
+		name.Stats = make(map[int]*Stat)
+	}
 	name.Stats[stat.Year] = stat
 }
 
-func (name *Name) LatestYear() *SSANameStat {
+func (name *Name) LatestYear() *Stat {
 	year := 0
 	for _, stat := range name.Stats {
 		if stat.Year > year {
@@ -31,7 +43,7 @@ func (name *Name) LatestYear() *SSANameStat {
 	return name.Stats[year]
 }
 
-func (name *Name) FirstYear() *SSANameStat {
+func (name *Name) FirstYear() *Stat {
 	year := time.Now().Year()
 	for _, stat := range name.Stats {
 		if stat.Year < year {
@@ -41,7 +53,7 @@ func (name *Name) FirstYear() *SSANameStat {
 	return name.Stats[year]
 }
 
-func (name *Name) MostPopularYear() *SSANameStat {
+func (name *Name) MostPopularYear() *Stat {
 	year := 0
 	for _, stat := range name.Stats {
 		if year == 0 {
@@ -51,4 +63,8 @@ func (name *Name) MostPopularYear() *SSANameStat {
 		}
 	}
 	return name.Stats[year]
+}
+
+func (name *Name) makeNameKey() string {
+	return name.Name + "::" + name.Gender
 }
