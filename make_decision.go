@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/AndyNortrup/baby-namer/ssa_data"
+	"github.com/AndyNortrup/baby-namer/names"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
@@ -29,7 +29,7 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 
 	renderNamePageTemplate(newName, ctx, w)
 
-	gen.getRandomName(ssa_data.FemaleFilter)
+	gen.getRandomName(names.FemaleFilter)
 }
 
 func recordDecision(name string, decision bool, username *user.User, ctx context.Context) {
@@ -54,7 +54,7 @@ func getQueryParam(url *url.URL) (string, bool) {
 	return name, decision
 }
 
-func renderNamePageTemplate(newName *ssa_data.Name, ctx context.Context, w http.ResponseWriter) {
+func renderNamePageTemplate(newName *names.Name, ctx context.Context, w http.ResponseWriter) {
 	t, err := getNameTemplate()
 	if err != nil {
 		log.Errorf(ctx, "Failed to parse template file: %v", err)

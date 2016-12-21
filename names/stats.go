@@ -1,4 +1,4 @@
-package ssa_data
+package names
 
 type Stat struct {
 	Occurrences int

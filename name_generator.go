@@ -3,7 +3,7 @@ package babynamer
 import (
 	"golang.org/x/net/context"
 
-	"github.com/AndyNortrup/baby-namer/ssa_data"
+	"github.com/AndyNortrup/baby-namer/names"
 	"github.com/AndyNortrup/baby-namer/usage"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
@@ -21,11 +21,11 @@ func NewNameGenerator(ctx context.Context, username string) *NameGenerator {
 	return gen
 }
 
-func (gen *NameGenerator) getName(previous string) (*ssa_data.Name, error) {
+func (gen *NameGenerator) getName(previous string) (*names.Name, error) {
 	//Get a name that has been recommended
 
 	//Get a random name if nothing else
-	return gen.getRandomName(ssa_data.FemaleFilter)
+	return gen.getRandomName(names.FemaleFilter)
 }
 
 //getRecommendedName gets a list of names from the datastore that were
@@ -54,8 +54,8 @@ func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, err
 
 //getRandomName makes repeated calls to the random name service until it finds
 // one that the current user has not previously make a decision on.
-func (gen *NameGenerator) getRandomName(gender ssa_data.Gender) (*ssa_data.Name, error) {
-	return ssa_data.GetRandomName(gen.ctx, gender)
+func (gen *NameGenerator) getRandomName(gender names.Gender) (*names.Name, error) {
+	return names.GetRandomName(gen.ctx, gender)
 }
 
 // getUndecidedName finds a name in the datastore that has not been recommended or rejected.

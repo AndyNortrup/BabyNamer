@@ -1,7 +1,8 @@
-package ssa_data
+package persist
 
 import (
 	"encoding/csv"
+	"github.com/AndyNortrup/baby-namer/names"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,7 +13,7 @@ import (
 
 var wg sync.WaitGroup
 
-func loadNames() map[string]*Name {
+func LoadNames() map[string]*names.Name {
 
 	dir := "names"
 	files, err := ioutil.ReadDir(dir)
@@ -20,27 +21,27 @@ func loadNames() map[string]*Name {
 		return nil
 	}
 
-	names := make(chan *Name)
-	result := make(chan map[string]*Name)
+	input := make(chan *names.Name)
+	result := make(chan map[string](*names.Name))
 
-	go receiveNames(names, result)
+	go receiveNames(input, result)
 
 	for _, file := range files {
 
 		if file.Mode().IsRegular() {
 			statsFile := path.Join(dir, file.Name())
 			wg.Add(1)
-			go readStatsFile(statsFile, names)
+			go readStatsFile(statsFile, input)
 		}
 	}
 	wg.Wait()
-	close(names)
+	close(input)
 
 	end := <-result
 	return end
 }
 
-func readStatsFile(path string, ch chan<- *Name) {
+func readStatsFile(path string, ch chan<- *names.Name) {
 	defer wg.Done()
 
 	file, err := os.Open(path)
@@ -83,17 +84,17 @@ func readLines(file *os.File) ([][]string, error) {
 // [1] = Gender (M/F)
 // [2] = Number of occurrences that year
 
-func convertLinesToStat(lines [][]string, year int, out chan<- *Name) {
+func convertLinesToStat(lines [][]string, year int, out chan<- *names.Name) {
 	var m, f int
 	for _, line := range lines {
-		name := NewName(line[0], line[1])
+		name := names.NewName(line[0], line[1])
 		occurrence := extractOccurrences(line)
 		if line[1] == "M" {
 			m++
-			name.addStat(NewNameStat(year, m, occurrence))
+			name.AddStat(names.NewNameStat(year, m, occurrence))
 		} else {
 			f++
-			name.addStat(NewNameStat(year, f, occurrence))
+			name.AddStat(names.NewNameStat(year, f, occurrence))
 		}
 		out <- name
 	}
@@ -109,8 +110,8 @@ func extractOccurrences(line []string) int {
 	return occurrence
 }
 
-func receiveNames(in <-chan *Name, out chan<- map[string]*Name) {
-	result := make(map[string]*Name)
+func receiveNames(in <-chan *names.Name, out chan<- map[string]*names.Name) {
+	result := make(map[string]*names.Name)
 
 	for name := range in {
 		result = addNameToMasterList(result, name)
@@ -119,18 +120,19 @@ func receiveNames(in <-chan *Name, out chan<- map[string]*Name) {
 	close(out)
 }
 
-func addNameToMasterList(names map[string]*Name, name *Name) map[string]*Name {
+func addNameToMasterList(names map[string]*names.Name, name *names.Name) map[string]*names.Name {
 
-	key := name.makeNameKey()
+	key := name.Key()
 
 	if names[key] == nil {
 		names[key] = name
 	} else {
 		update := names[key]
 		for _, stat := range name.Stats {
-			update.addStat(stat)
+			update.AddStat(stat)
 			names[key] = update
 		}
 	}
+
 	return names
 }

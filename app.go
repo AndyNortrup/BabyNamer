@@ -1,10 +1,9 @@
 package babynamer
 
 import (
-	"net/http"
-
-	"github.com/AndyNortrup/baby-namer/ssa_data"
+	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 const EntityTypeNameDetails string = "NameDetails"
@@ -25,7 +24,7 @@ func Run() {
 	r.PathPrefix("/fonts/").Handler(http.StripPrefix("/fonts/", http.FileServer(http.Dir("templates/fonts"))))
 
 	r.HandleFunc("/admin/scrape", scrapeRandomNames)
-	r.HandleFunc("/admin/load_ssa_data", ssa_data.HandleLoadData)
+	r.HandleFunc("/admin/load_ssa_data", persist.HandleLoadData)
 
 	http.Handle("/", r)
 }

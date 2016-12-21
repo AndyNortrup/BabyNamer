@@ -1,13 +1,16 @@
-package ssa_data
+package persist
 
 import (
-	"context"
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/aetest"
-	"google.golang.org/appengine/datastore"
-	"net/http"
 	"os"
 	"testing"
+
+	"google.golang.org/appengine/aetest"
+	"google.golang.org/appengine/datastore"
+
+	"github.com/AndyNortrup/baby-namer/names"
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"net/http"
 )
 
 var inst aetest.Instance
@@ -31,7 +34,7 @@ func tearDown() {
 
 func deleteAllNameDetails(ctx context.Context) error {
 	q := datastore.NewQuery(entityTypeName).KeysOnly()
-	details := []Name{}
+	details := []names.Name{}
 	keys, err := q.GetAll(ctx, details)
 	if err != nil {
 		return err
