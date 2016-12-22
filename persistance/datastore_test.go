@@ -3,6 +3,7 @@ package persist
 import (
 	"github.com/AndyNortrup/baby-namer/names"
 	"testing"
+	"time"
 )
 
 var input = []string{"Mary::F", "Anna::F", "Emma::F", "Pat::M", "Pat::F"}
@@ -45,12 +46,28 @@ func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 	setupDatastoreTest(mgr, t)
 
 	//Check that we get random values back
-	_, err := mgr.GetRandomName(names.FemaleFilter)
-	if err != nil {
-		t.Logf("Failed to get random name: %v", err)
-		t.Fail()
+	// Because we only have 5 names in the test dataset, we need to try a few times to make sure we get one.
+	received := false
+
+	for x := 0; x < 100; x++ {
+		_, err := mgr.GetRandomName(names.FemaleFilter)
+		if err == nil {
+			received = true
+			break
+		}
+		if err != nil && err != NoRandomName {
+			t.Logf("Failed to get random name: %v", err)
+			t.Fail()
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
+	if !received {
+		t.Fail()
+		t.Logf("No random name returned.")
+	}
+
+	deleteAllNameDetails(ctx)
 }
 
 func setupDatastoreTest(mgr DataManager, t *testing.T) {

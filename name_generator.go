@@ -55,7 +55,7 @@ func (gen *NameGenerator) getRecommendedName(previous string) (*NameDetails, err
 //getRandomName makes repeated calls to the random name service until it finds
 // one that the current user has not previously make a decision on.
 func (gen *NameGenerator) getRandomName(gender names.Gender) (*names.Name, error) {
-	return names.GetRandomName(gen.ctx, gender)
+	return nil, nil
 }
 
 // getUndecidedName finds a name in the datastore that has not been recommended or rejected.

@@ -21,6 +21,8 @@ const filterNameEquals string = "Name = "
 const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="
 
+var NoRandomName = errors.New("No random name returned.")
+
 func NewDatastoreManager(ctx context.Context) *DatastorePersistenceManager {
 	return &DatastorePersistenceManager{
 		ctx: ctx,
@@ -35,18 +37,28 @@ func (mgr *DatastorePersistenceManager) GetName(name string, gender names.Gender
 }
 
 func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*names.Name, error) {
+	rnd := randomFloat()
 	query := datastore.NewQuery(entityTypeName).
 		Filter(filterGenderEquals, gender).
-		Filter(filterRandomNumber, randomFloat()).
+		Filter(filterRandomNumber, rnd).
 		Limit(1)
 
 	results, err := mgr.executeGetNameQuery(mgr.ctx, query)
+	if err != nil {
+		log.Errorf(mgr.ctx, "Failed to get random name: %v", err)
+		return nil, err
+	}
+	if len(results) == 0 {
+		log.Errorf(mgr.ctx, "No random name returned.")
+		return nil, NoRandomName
+	}
 	return results[0], err
 }
 
 func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	dName := newDatastoreName(name)
-	key := datastore.NewIncompleteKey(mgr.ctx, name.Key(), nil)
+
+	key := datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
 	key, err := datastore.Put(mgr.ctx, key, dName)
 	if err != nil {
 		log.Errorf(mgr.ctx, "Failed to put name %v into datastore: %v", name.Name, err)
@@ -106,7 +118,6 @@ func (mgr *DatastorePersistenceManager) addStatsToDatastore(ctx context.Context,
 
 	for _, stat := range stats {
 		key := datastore.NewIncompleteKey(ctx, entityTypeStats, parent)
-
 		_, err := datastore.Put(ctx, key, stat)
 		if err != nil {
 			return err
