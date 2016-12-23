@@ -11,19 +11,19 @@ var testNames = []string{"Mary", "Anna", "Emma", "Pat", "Pat"}
 var first = []int{1880, 1880, 1881, 1880, 1881}
 var last = []int{1881, 1882, 1882, 1882, 1881}
 var max = []int{1880, 1882, 1882, 1882, 1881}
-var gender = []string{"F", "F", "F", "M", "F"}
+var gender = []names.Gender{names.Female, names.Female, names.Female, names.Male, names.Female}
 var genderFilter = []names.Gender{
-	names.FemaleFilter,
-	names.FemaleFilter,
-	names.FemaleFilter,
-	names.MaleFilter,
-	names.FemaleFilter,
+	names.Female,
+	names.Female,
+	names.Female,
+	names.Male,
+	names.Female,
 }
 
 func TestGetName(t *testing.T) {
 	ctx := newTestContext()
 	mgr := NewDatastoreManager(ctx)
-	setupDatastoreTest(mgr, t)
+	LoadNames(ctx)
 
 	for index, name := range testNames {
 		result, err := mgr.GetName(name, genderFilter[index])
@@ -31,26 +31,22 @@ func TestGetName(t *testing.T) {
 			t.Logf("Failed to get name: %v - %v", name, err)
 			t.FailNow()
 		}
-
-		for x, value := range result {
-			checkResults(index, input[x], value, t)
-		}
+		checkResults(index, input[index], result, t)
 	}
-
 	deleteAllNameDetails(ctx)
 }
 
 func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 	ctx := newTestContext()
 	mgr := NewDatastoreManager(ctx)
-	setupDatastoreTest(mgr, t)
+	LoadNames(ctx)
 
 	//Check that we get random values back
 	// Because we only have 5 names in the test dataset, we need to try a few times to make sure we get one.
 	received := false
 
-	for x := 0; x < 100; x++ {
-		_, err := mgr.GetRandomName(names.FemaleFilter)
+	for x := 0; x < 5; x++ {
+		_, err := mgr.GetRandomName(names.Female)
 		if err == nil {
 			received = true
 			break
@@ -64,21 +60,10 @@ func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 
 	if !received {
 		t.Fail()
-		t.Logf("No random name returned.")
+		t.Log("No random name returned.")
 	}
 
 	deleteAllNameDetails(ctx)
-}
-
-func setupDatastoreTest(mgr DataManager, t *testing.T) {
-	inputData := LoadNames()
-	for _, name := range inputData {
-		err := mgr.AddName(name)
-		if err != nil {
-			t.Logf("Failed to write data to datastore: %v", err)
-			t.FailNow()
-		}
-	}
 }
 
 func checkResults(idx int, name string, result *names.Name, t *testing.T) {
@@ -95,8 +80,8 @@ func checkResults(idx int, name string, result *names.Name, t *testing.T) {
 		t.Fail()
 	}
 
-	if result.MostPopularYear().Year != max[idx] {
-		t.Logf("%v: Expected most popular year: %v Recieved: %v", name, last[idx], result.MostPopularYear().Year)
+	if result.MostOccurrences().Year != max[idx] {
+		t.Logf("%v: Expected most popular year: %v Recieved: %v", name, last[idx], result.MostOccurrences().Year)
 		t.Fail()
 	}
 

@@ -23,8 +23,8 @@ func Run() {
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("templates/js"))))
 	r.PathPrefix("/fonts/").Handler(http.StripPrefix("/fonts/", http.FileServer(http.Dir("templates/fonts"))))
 
-	r.HandleFunc("/admin/scrape", scrapeRandomNames)
 	r.HandleFunc("/admin/load_ssa_data", persist.HandleLoadData)
+	r.HandleFunc("/charts/{name}/{gender}", handleChart)
 
 	http.Handle("/", r)
 }

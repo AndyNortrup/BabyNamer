@@ -1,16 +1,17 @@
 package names
 
 import (
+	"sort"
 	"time"
 )
 
 type Name struct {
 	Name   string
-	Gender string
+	Gender Gender
 	Stats  map[int]*Stat `datastore:"-"`
 }
 
-func NewName(name, gender string) *Name {
+func NewName(name string, gender Gender) *Name {
 	result := &Name{
 		Name:   name,
 		Gender: gender,
@@ -46,12 +47,22 @@ func (name *Name) FirstYear() *Stat {
 	return name.Stats[year]
 }
 
-func (name *Name) MostPopularYear() *Stat {
+func (name *Name) HighestRank() *Stat {
 	year := 0
 	for _, stat := range name.Stats {
 		if year == 0 {
 			year = stat.Year
-		} else if stat.Occurrences > name.Stats[year].Occurrences {
+		} else if stat.Rank > name.Stats[year].Rank {
+			year = stat.Year
+		}
+	}
+	return name.Stats[year]
+}
+
+func (name *Name) MostOccurrences() *Stat {
+	year := 0
+	for _, stat := range name.Stats {
+		if year == 0 || stat.Occurrences > name.Stats[year].Occurrences {
 			year = stat.Year
 		}
 	}
@@ -59,5 +70,21 @@ func (name *Name) MostPopularYear() *Stat {
 }
 
 func (name *Name) Key() string {
-	return name.Name + "::" + name.Gender
+	return name.Name + "::" + name.Gender.GoString()
+}
+
+func (name *Name) SortedStats() []*Stat {
+	years := []int{}
+	result := []*Stat{}
+
+	for _, stat := range name.Stats {
+		years = append(years, stat.Year)
+	}
+	sort.Ints(years)
+
+	for _, year := range years {
+		result = append(result, name.Stats[year])
+	}
+
+	return result
 }

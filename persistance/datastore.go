@@ -22,6 +22,7 @@ const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="
 
 var NoRandomName = errors.New("No random name returned.")
+var NoNameFound = errors.New("Requested name not found.")
 
 func NewDatastoreManager(ctx context.Context) *DatastorePersistenceManager {
 	return &DatastorePersistenceManager{
@@ -29,21 +30,36 @@ func NewDatastoreManager(ctx context.Context) *DatastorePersistenceManager {
 	}
 }
 
-func (mgr *DatastorePersistenceManager) GetName(name string, gender names.Gender) ([]*names.Name, error) {
-	query := datastore.NewQuery(entityTypeName).
-		Filter(filterNameEquals, name).
-		Filter(filterGenderEquals, gender)
-	return mgr.executeGetNameQuery(mgr.ctx, query)
+func (mgr *DatastorePersistenceManager) GetName(name string, gender names.Gender) (*names.Name, error) {
+	query := mgr.buildNameQuery(name, gender)
+	result, _, err := mgr.executeGetNameQuery(query)
+	if err != nil {
+		log.Warningf(mgr.ctx, "action=get_name requested_name=%v gender=%v error=%v", name, gender.GoString(), err)
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		log.Warningf(mgr.ctx, "action=get_name requested_name=%v gender=%v result=no_names_found",
+			name, gender.GoString())
+		return nil, NoNameFound
+	}
+
+	if len(result) > 1 {
+		log.Warningf(mgr.ctx, "action=get_name requested_name=%v gender=%v result=multiple_names_found",
+			name, gender.GoString())
+	}
+
+	return result[0], nil
 }
 
 func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*names.Name, error) {
 	rnd := randomFloat()
 	query := datastore.NewQuery(entityTypeName).
-		Filter(filterGenderEquals, gender).
+		Filter(filterGenderEquals, gender.GoString()).
 		Filter(filterRandomNumber, rnd).
 		Limit(1)
 
-	results, err := mgr.executeGetNameQuery(mgr.ctx, query)
+	results, _, err := mgr.executeGetNameQuery(query)
 	if err != nil {
 		log.Errorf(mgr.ctx, "Failed to get random name: %v", err)
 		return nil, err
@@ -56,15 +72,30 @@ func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*nam
 }
 
 func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
-	dName := newDatastoreName(name)
+	//Check if there is an existing name in the datastore
+	_, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
+	if err != nil {
+		log.Errorf(mgr.ctx, "Action=add_name_to_datastore %v", err)
+	}
 
-	key := datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
-	key, err := datastore.Put(mgr.ctx, key, dName)
+	dName := newDatastoreName(name)
+	var key *datastore.Key
+
+	//If there is an existing key for this name use it, otherwise create a new one.
+	if len(keys) > 0 {
+		key = keys[0]
+	} else {
+		key = datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
+	}
+
+	//Put the name in the datastore.
+	key, err = datastore.Put(mgr.ctx, key, dName)
 	if err != nil {
 		log.Errorf(mgr.ctx, "Failed to put name %v into datastore: %v", name.Name, err)
 		return err
 	}
 
+	//Add the stats
 	err = mgr.addStatsToDatastore(mgr.ctx, key, name.Stats)
 	if err != nil {
 		return err
@@ -80,22 +111,31 @@ func (mgr *DatastorePersistenceManager) UpdateDecision(name names.Name, decision
 
 }
 
-func (mgr *DatastorePersistenceManager) executeGetNameQuery(ctx context.Context, query *datastore.Query) ([]*names.Name, error) {
+func (mgr *DatastorePersistenceManager) buildNameQuery(name string, gender names.Gender) *datastore.Query {
+	return datastore.NewQuery(entityTypeName).
+		Filter(filterNameEquals, name).
+		Filter(filterGenderEquals, gender.GoString())
+}
+
+func (mgr *DatastorePersistenceManager) executeGetNameQuery(query *datastore.Query) ([]*names.Name, []*datastore.Key, error) {
+
 	results := []*datastoreName{}
 	keys, err := query.GetAll(mgr.ctx, &results)
 
 	if err != nil {
-		return nil, errors.New("Failed to get name: " + err.Error())
+		return nil, nil, errors.New("Failed to get name: " + err.Error())
 	}
 
-	names := []*names.Name{}
+	result := []*names.Name{}
 	for index, name := range results {
-		name := &name.Name
-		mgr.getStatsForKey(name, keys[index])
-		names = append(names, name)
+		out := &name.Name
+		out.Gender = names.GetGender(name.Gender)
+		mgr.getStatsForKey(out, keys[index])
+		result = append(result, out)
 	}
+	//log.Infof(mgr.ctx, "action=executeGetNameQuery recordCount=%v", len(results))
 
-	return names, nil
+	return result, keys, nil
 }
 
 func (mgr *DatastorePersistenceManager) getStatsForKey(name *names.Name, key *datastore.Key) (*names.Name, error) {
@@ -114,7 +154,9 @@ func (mgr *DatastorePersistenceManager) getStatsForKey(name *names.Name, key *da
 	return name, nil
 }
 
-func (mgr *DatastorePersistenceManager) addStatsToDatastore(ctx context.Context, parent *datastore.Key, stats map[int]*names.Stat) error {
+func (mgr *DatastorePersistenceManager) addStatsToDatastore(ctx context.Context,
+	parent *datastore.Key,
+	stats map[int]*names.Stat) error {
 
 	for _, stat := range stats {
 		key := datastore.NewIncompleteKey(ctx, entityTypeStats, parent)

@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/AndyNortrup/baby-namer/names"
+	"github.com/AndyNortrup/baby-namer/persistance"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
 )
 
@@ -16,20 +15,14 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 
 	ctx := appengine.NewContext(r)
 	username := user.Current(ctx)
-	gen := NewNameGenerator(ctx, username.String())
 
 	name, decision := getQueryParam(r.URL)
-
 	recordDecision(name, decision, username, ctx)
 
-	newName, err := gen.getName(name)
-	if err != nil {
-		log.Errorf(ctx, "Error getting name: %v", err)
-	}
-
-	renderNamePageTemplate(newName, ctx, w)
-
-	gen.getRandomName(names.FemaleFilter)
+	//Create suggestion page and render it.
+	sp := NewSuggestionPage(username, persist.NewDatastoreManager(ctx), ctx)
+	sp.getName()
+	sp.render(w)
 }
 
 func recordDecision(name string, decision bool, username *user.User, ctx context.Context) {
@@ -52,16 +45,4 @@ func getQueryParam(url *url.URL) (string, bool) {
 		decision = false
 	}
 	return name, decision
-}
-
-func renderNamePageTemplate(newName *names.Name, ctx context.Context, w http.ResponseWriter) {
-	t, err := getNameTemplate()
-	if err != nil {
-		log.Errorf(ctx, "Failed to parse template file: %v", err)
-	}
-
-	err = t.Execute(w, newName)
-	if err != nil {
-		log.Errorf(ctx, "Failed to Execute template: %v\tName: %v", err, newName)
-	}
 }

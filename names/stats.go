@@ -1,5 +1,7 @@
 package names
 
+import "time"
+
 type Stat struct {
 	Occurrences int
 	Year        int
@@ -12,4 +14,8 @@ func NewNameStat(year, rank, occurances int) *Stat {
 		Rank:        rank,
 		Occurrences: occurances,
 	}
+}
+
+func (stat *Stat) YearAsTime() time.Time {
+	return time.Date(stat.Year, 1, 1, 0, 0, 0, 0, time.Local)
 }
