@@ -34,6 +34,7 @@ func LoadNames(ctx context.Context) {
 			wg.Add(1)
 			go readStatsFile(ctx, statsFile, input)
 		}
+
 	}
 	wg.Wait()
 	close(input)

@@ -25,7 +25,6 @@ func NewDatastoreNameManager(ctx context.Context, username string) *DatastoreNam
 
 func (u *DatastoreNameManager) getNameFromDatastore(name string) (*NameDetails, *datastore.Key, error) {
 	//Get the name from the datastore
-	log.Debugf(u.ctx, "Getting name from datastore: %v", name)
 	query := datastore.NewQuery(EntityTypeNameDetails).
 		Filter("Name =", name)
 

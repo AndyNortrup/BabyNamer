@@ -5,9 +5,11 @@ import (
 	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/gorilla/mux"
 	"github.com/wcharczuk/go-chart"
+	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -19,7 +21,7 @@ func NewStatsChart(name *names.Name) *StatsChart {
 	return &StatsChart{Name: name}
 }
 
-func (sc *StatsChart) RenderChart(w http.ResponseWriter) {
+func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 
 	//Get the stats and put them in arrays to use as time series.
 	dates := []time.Time{}
@@ -32,24 +34,36 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter) {
 	}
 
 	graph := &chart.Chart{
-		YAxis: chart.YAxis{
-			Style: chart.Style{
-				Show: true,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top:   50,
+				Left:  100,
+				Right: 100,
 			},
 		},
 		XAxis: chart.XAxis{
+			Name:      "Year",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+		},
+		YAxis: chart.YAxis{
+			Name:      "Occurannces",
+			NameStyle: chart.StyleShow(),
 			Style: chart.Style{
 				Show: true,
+			},
+			ValueFormatter: func(v interface{}) string {
+				return strconv.Itoa(int(v.(float64)))
 			},
 		},
 		YAxisSecondary: chart.YAxis{
-			Style: chart.Style{
-				Show: true,
+			Name:      "Rank",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+			ValueFormatter: func(v interface{}) string {
+				return strconv.Itoa(int(v.(float64)))
 			},
 		},
-		Width:  300,
-		Height: 300,
-
 		Series: []chart.Series{
 			chart.TimeSeries{
 				XValues: dates,
@@ -64,6 +78,11 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter) {
 				YAxis:   chart.YAxisSecondary,
 			},
 		},
+		Width: 1024,
+	}
+
+	graph.Elements = []chart.Renderable{
+		chart.LegendThin(graph),
 	}
 
 	w.Header().Set("Content-Type", "images/png")
@@ -88,5 +107,5 @@ func handleChart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := NewStatsChart(name)
-	c.RenderChart(w)
+	c.RenderChart(w, ctx)
 }
