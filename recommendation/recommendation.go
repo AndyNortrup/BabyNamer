@@ -5,20 +5,16 @@ import (
 	"google.golang.org/appengine/user"
 )
 
-type Decision struct {
-	Name          names.Name `datastore: "-"`
-	RecommendedBy []*user.User
-	RejectedBy    []*user.User
+type Recommendation struct {
+	Email       string
+	Recommended bool
 }
 
-func NewDecision() *Decision {
-	return &Decision{}
+func NewRecommendation(user *user.User, recommended bool) *Recommendation {
+	return &Recommendation{Email: user.Email, Recommended: recommended}
 }
 
-func (rec *Decision) Recommend(user *user.User) {
-	rec.RecommendedBy = append(rec.RecommendedBy, user)
-}
-
-func (rec *Decision) Reject(user *user.User) {
-	rec.RejectedBy = append(rec.RejectedBy, user)
+type RecommendationList struct {
+	Name      names.Name
+	Decisions []*Recommendation
 }

@@ -37,9 +37,14 @@ type mockPersistenceManager struct {
 	randCount int
 }
 
-func (mpm *mockPersistenceManager) GetName(name string, gender names.Gender) ([]*names.Name, error) {
-	return nil, nil
+func (*mockPersistenceManager) AddName(name *names.Name) error {
+	panic("implement me")
 }
+
+func (*mockPersistenceManager) GetName(name string, gender names.Gender) (*names.Name, error) {
+	panic("implement me")
+}
+
 func (mpm *mockPersistenceManager) GetRandomName(names.Gender) (*names.Name, error) {
 	resultName := randomNames[mpm.randCount]
 	resultError := randomErrors[mpm.randCount]
@@ -49,10 +54,10 @@ func (mpm *mockPersistenceManager) GetRandomName(names.Gender) (*names.Name, err
 	return resultName, resultError
 }
 
-func (mpm *mockPersistenceManager) AddName(name *names.Name) error {
-	return nil
+func (*mockPersistenceManager) GetRecommendedNames(user, partner *user.User) ([]*names.Name, error) {
+	panic("implement me")
 }
-func (mpm *mockPersistenceManager) GetRecommendedNames() []*names.Name {
-	return nil
+
+func (*mockPersistenceManager) UpdateDecision(*names.Name, *decision.Recommendation) error {
+	panic("implement me")
 }
-func (mpm *mockPersistenceManager) UpdateDecision(names.Name, decision.Decision) {}

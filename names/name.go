@@ -1,6 +1,7 @@
 package names
 
 import (
+	"fmt"
 	"sort"
 	"time"
 )
@@ -87,4 +88,12 @@ func (name *Name) SortedStats() []*Stat {
 	}
 
 	return result
+}
+
+func (name *Name) GoString() string {
+	str := fmt.Sprintf("Name=%v Gender=%v ", name.Name, name.Gender)
+	for _, value := range name.Stats {
+		str = fmt.Sprintf("%v Year=%v Rank=%v Occurance=%v", str, value.Year, value.Rank, value.Occurrences)
+	}
+	return str
 }

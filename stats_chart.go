@@ -45,18 +45,21 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 			Name:      "Year",
 			NameStyle: chart.StyleShow(),
 			Style:     chart.StyleShow(),
-		},
-		YAxis: chart.YAxis{
-			Name:      "Occurannces",
-			NameStyle: chart.StyleShow(),
-			Style: chart.Style{
-				Show: true,
-			},
 			ValueFormatter: func(v interface{}) string {
-				return strconv.Itoa(int(v.(float64)))
+				return time.Unix(0, int64(v.(float64))).Format("2006")
 			},
 		},
-		YAxisSecondary: chart.YAxis{
+		//YAxis: chart.YAxis{
+		//	Name:      "Occurannces",
+		//	NameStyle: chart.StyleShow(),
+		//	Style: chart.Style{
+		//		Show: true,
+		//	},
+		//	ValueFormatter: func(v interface{}) string {
+		//		return strconv.Itoa(int(v.(float64)))
+		//	},
+		//},
+		YAxis: chart.YAxis{
 			Name:      "Rank",
 			NameStyle: chart.StyleShow(),
 			Style:     chart.StyleShow(),
@@ -65,17 +68,17 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 			},
 		},
 		Series: []chart.Series{
-			chart.TimeSeries{
-				XValues: dates,
-				YValues: occurrences,
-				Name:    "Occurrences",
-				YAxis:   chart.YAxisPrimary,
-			},
+			//chart.TimeSeries{
+			//	XValues: dates,
+			//	YValues: occurrences,
+			//	Name:    "Occurrences",
+			//	YAxis:   chart.YAxisPrimary,
+			//},
 			chart.TimeSeries{
 				XValues: dates,
 				YValues: rank,
 				Name:    "Rank",
-				YAxis:   chart.YAxisSecondary,
+				YAxis:   chart.YAxisPrimary,
 			},
 		},
 		Width: 1024,

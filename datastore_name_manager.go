@@ -59,7 +59,7 @@ func (u *DatastoreNameManager) updateNameRecommendations(name string,
 		log.Warningf(u.ctx, "Error updating name with decision.")
 		return err
 	}
-	log.Infof(u.ctx, "Name record updated.")
+	log.Infof(u.ctx, "action=updateNameRecommendatino user=")
 	return nil
 }
 

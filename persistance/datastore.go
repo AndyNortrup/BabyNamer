@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/user"
 	"math/rand"
 	"time"
 )
@@ -17,9 +18,11 @@ type DatastorePersistenceManager struct {
 
 const entityTypeName string = "Name"
 const entityTypeStats string = "Stats"
+const entityTypeRecommendations = "Recommendations"
 const filterNameEquals string = "Name = "
 const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="
+const filterRecommendationUser string = "Email ="
 
 var NoRandomName = errors.New("No random name returned.")
 var NoNameFound = errors.New("Requested name not found.")
@@ -103,12 +106,67 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	return nil
 }
 
-func (mgr *DatastorePersistenceManager) GetRecommendedNames() []*names.Name {
+func (mgr *DatastorePersistenceManager) GetRecommendedNames(usr, partner *user.User) ([]*names.Name, error) {
+	return nil, nil
+}
+
+func (mgr *DatastorePersistenceManager) UpdateDecision(name *names.Name, d *decision.Recommendation) error {
+	_, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
+
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err.Error())
+		return err
+	}
+
+	if len(keys) > 0 {
+		for _, key := range keys {
+			decisionKeys, err := mgr.getDecisions(key, d)
+			if err != nil {
+				return err
+			}
+
+			if len(decisionKeys) > 0 {
+				for _, decisionKey := range decisionKeys {
+					_, err := datastore.Put(mgr.ctx, decisionKey, d)
+					if err != nil {
+						log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err)
+						return err
+					}
+				}
+			} else {
+				err := mgr.writeNewDecision(key, d)
+				if err != nil {
+					log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err)
+					return err
+				}
+			}
+		}
+
+	}
 	return nil
 }
 
-func (mgr *DatastorePersistenceManager) UpdateDecision(name names.Name, decision decision.Decision) {
+func (mgr *DatastorePersistenceManager) getDecisions(ancestor *datastore.Key, decision *decision.Recommendation) ([]*datastore.Key, error) {
+	//get decisions
+	query := datastore.NewQuery(entityTypeRecommendations).
+		Ancestor(ancestor).Filter(filterRecommendationUser, decision.Email).KeysOnly()
+	results := make([]interface{}, 0)
+	decisionKeys, err := query.GetAll(mgr.ctx, results)
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err.Error())
+		return nil, err
+	}
+	return decisionKeys, nil
+}
 
+func (mgr *DatastorePersistenceManager) writeNewDecision(parent *datastore.Key, decision *decision.Recommendation) error {
+	decisionKey := datastore.NewIncompleteKey(mgr.ctx, entityTypeRecommendations, parent)
+	_, err := datastore.Put(mgr.ctx, decisionKey, decision)
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=writeNewDecision error=%v", err)
+		return err
+	}
+	return nil
 }
 
 func (mgr *DatastorePersistenceManager) buildNameQuery(name string, gender names.Gender) *datastore.Query {

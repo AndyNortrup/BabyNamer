@@ -23,7 +23,9 @@ func LoadNames(ctx context.Context) {
 		log.Errorf(ctx, "action=load_names %v", err)
 	}
 
+	concurrency := 2
 	input := make(chan *names.Name)
+	sem := make(chan bool)
 
 	go receiveNames(ctx, input)
 
@@ -32,16 +34,21 @@ func LoadNames(ctx context.Context) {
 		if file.Mode().IsRegular() {
 			statsFile := path.Join(dir, file.Name())
 			wg.Add(1)
-			go readStatsFile(ctx, statsFile, input)
+			go readStatsFile(ctx, statsFile, input, sem)
 		}
 
+	}
+
+	for i := 0; i < concurrency; i++ {
+		sem <- true
 	}
 	wg.Wait()
 	close(input)
 }
 
-func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name) {
+func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name, sem <-chan bool) {
 	defer wg.Done()
+	defer func() { <-sem }()
 
 	file, err := os.Open(path)
 	defer file.Close()
