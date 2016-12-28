@@ -62,7 +62,7 @@ r.HandleFunc("/articles/{category}/", ArticlesCategoryHandler)
 r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler)
 ```
 
-The names are used to create a map of route variables which can be retrieved calling `mux.Vars()`:
+The testNames are used to create a map of route variables which can be retrieved calling `mux.Vars()`:
 
 ```go
 vars := mux.Vars(request)

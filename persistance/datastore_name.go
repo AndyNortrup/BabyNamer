@@ -1,6 +1,8 @@
 package persist
 
-import "github.com/AndyNortrup/baby-namer/names"
+import (
+	"github.com/AndyNortrup/baby-namer/names"
+)
 
 type datastoreName struct {
 	names.Name

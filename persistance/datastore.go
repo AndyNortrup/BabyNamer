@@ -9,6 +9,7 @@ import (
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,7 @@ const filterNameEquals string = "Name = "
 const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="
 const filterRecommendationUser string = "Email ="
+const filterRecommendationBool string = "Recommended ="
 
 var NoRandomName = errors.New("No random name returned.")
 var NoNameFound = errors.New("Requested name not found.")
@@ -107,7 +109,64 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 }
 
 func (mgr *DatastorePersistenceManager) GetRecommendedNames(usr, partner *user.User) ([]*names.Name, error) {
-	return nil, nil
+
+	//Get all of the recommendations for this user
+	uRec, uKeys, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(usr, false))
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+		return nil, err
+	}
+
+	//Add them to a map
+	nameMap := make(map[string]*decision.Recommendation)
+	for index, key := range uKeys {
+		nameMap[key.Parent().StringID()] = uRec[index]
+	}
+
+	//Get all of the recommendations for the user
+	_, pKeys, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(partner, true))
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+		return nil, err
+	}
+
+	delta := []string{}
+	//determine if this is a recommendation that the partner has made but the user hasn't decided on.
+	for _, key := range pKeys {
+		if nameMap[key.Parent().StringID()] == nil {
+			delta = append(delta, key.Parent().StringID())
+		}
+	}
+
+	result := []*names.Name{}
+	for _, stringKey := range delta {
+		parts := strings.Split(stringKey, "::")
+		nameVals, _, err := mgr.executeGetNameQuery(mgr.buildNameQuery(parts[0], names.GetGender(parts[1])))
+		if err != nil {
+			log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+		}
+		for _, name := range nameVals {
+			result = append(result, name)
+		}
+	}
+
+	return result, nil
+}
+
+func (mgr *DatastorePersistenceManager) getRecommendationQuery(usr *user.User, approvedOnly bool) *datastore.Query {
+	q := datastore.NewQuery(entityTypeRecommendations).
+		Filter(filterRecommendationUser, usr.Email)
+	if approvedOnly {
+		q = q.Filter(filterRecommendationBool, true)
+	}
+	return q
+}
+
+func (mgr *DatastorePersistenceManager) getUserRecommendations(
+	query *datastore.Query) ([]*decision.Recommendation, []*datastore.Key, error) {
+	recommendations := []*decision.Recommendation{}
+	keys, err := query.GetAll(mgr.ctx, &recommendations)
+	return recommendations, keys, err
 }
 
 func (mgr *DatastorePersistenceManager) UpdateDecision(name *names.Name, d *decision.Recommendation) error {
@@ -191,7 +250,6 @@ func (mgr *DatastorePersistenceManager) executeGetNameQuery(query *datastore.Que
 		mgr.getStatsForKey(out, keys[index])
 		result = append(result, out)
 	}
-	//log.Infof(mgr.ctx, "action=executeGetNameQuery recordCount=%v", len(results))
 
 	return result, keys, nil
 }

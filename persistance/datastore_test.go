@@ -4,7 +4,6 @@ import (
 	"github.com/AndyNortrup/baby-namer/names"
 	"github.com/AndyNortrup/baby-namer/recommendation"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/aetest"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/user"
 	"testing"
@@ -47,7 +46,7 @@ func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 	LoadNames(ctx)
 
 	//Check that we get random values back
-	// Because we only have 5 names in the test dataset, we need to try a few times to make sure we get one.
+	// Because we only have 5 names in the test data set, we need to try a few times to make sure we get one.
 	received := false
 
 	for x := 0; x < 5; x++ {
@@ -96,11 +95,7 @@ func checkResults(idx int, name string, result *names.Name, t *testing.T) {
 }
 
 func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
-	ctx, done, err := aetest.NewContext()
-	if err != nil {
-		t.Fatalf("action=TestDatastorePersistenceManager_UpdateDecision error=%v", err)
-	}
-	defer done()
+	ctx := newTestContext()
 
 	usr := &user.User{Email: "test1@test.com"}
 
@@ -108,7 +103,10 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 	name := names.NewName("Mary", names.Female)
 	rec := decision.NewRecommendation(usr, true)
 
-	data.AddName(name)
+	err := data.AddName(name)
+	if err != nil {
+		t.Fatalf("action=TestDatastorePersistenceManager_UpdateDecision error=%v", err)
+	}
 
 	err = data.UpdateDecision(name, rec)
 	if err != nil {
@@ -144,7 +142,7 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 	}
 
 	if out[0].Recommended != false {
-		t.Log("action=TestDatastorePersistenceManager_UpdateDecision attribute=Recommended expected=%v recieved=%v",
+		t.Logf("action=TestDatastorePersistenceManager_UpdateDecision attribute=Recommended expected=%v recieved=%v",
 			false, out[0].Recommended)
 		t.FailNow()
 	}
@@ -159,43 +157,86 @@ func getAllRecommendations(ctx context.Context) ([]*decision.Recommendation, err
 	return out, err
 }
 
-func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
-	ctx, done, err := aetest.NewContext()
-	if err != nil {
-		t.Fatalf("action=TestGetRecommendedNames error=%v", err)
-	}
-	defer done()
+func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
+	ctx := newTestContext()
 
 	recommendedName := names.NewName("Recommended", names.Female)
-	rejectedName := names.NewName("Rejected", names.Female)
-	undecidedName := names.NewName("Undecided", names.Female)
 
 	user1 := &user.User{Email: "user1@test.com"}
-	user2 := &user.User{Email: "user2@test.com"}
-
 	rec1 := decision.NewRecommendation(user1, true)
-	rec2 := decision.NewRecommendation(user1, false)
 
 	mgr := NewDatastoreManager(ctx)
-
 	mgr.AddName(recommendedName)
-	mgr.AddName(rejectedName)
-	mgr.AddName(undecidedName)
-
 	mgr.UpdateDecision(recommendedName, rec1)
-	mgr.UpdateDecision(recommendedName, rec2)
 
-	recommendNames, err := mgr.GetRecommendedNames(user1, user2)
-
-	if len(recommendNames) != 1 {
-		t.FailNow()
-		t.Logf("action=TestDatastorePersistenceManager_GetRecommendedNames "+"failure=incorrect number of recommended names returned "+"expected=1 recieved=%v", len(recommendNames))
+	recs, _, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
+	if err != nil {
+		t.Fatalf("action=TestDataStorePersistenceManager_GetUserRecommendations "+"error=%v", err)
 	}
 
-	if recommendNames[0] != recommendedName {
+	if len(recs) != 1 {
+		t.Logf("action=TestDataStorePersistenceManager_GetUserRecommendations "+"incorrect number of recommendations expected=1"+"recieved=%v", len(recs))
 		t.FailNow()
-		t.Logf("action=TestDatastorePersistenceManager_GetRecommendedNames "+"failure=wrong name returned "+"expected=%v "+"recieved=%v ", recommendedName, recommendNames[0])
+	}
+
+	rec1.Recommended = false
+	mgr.UpdateDecision(recommendedName, rec1)
+	recs, _, err = mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
+	if len(recs) != 0 {
+		t.Logf("action=TestDataStorePersistenceManager_GetUserRecommendations "+"incorrect number of recommendations expected=0"+"recieved=%v", len(recs))
+		t.FailNow()
 	}
 
 	deleteAllNameDetails(ctx)
+	ctx.Done()
+}
+
+func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
+	ctx := newTestContext()
+
+	testNames := []*names.Name{
+		names.NewName("Recommended", names.Female),
+		names.NewName("Rejected", names.Female),
+		names.NewName("Undecided", names.Female),
+	}
+
+	usr := &user.User{Email: "usr@test.com"}
+	partner := &user.User{Email: "partner@test.com"}
+
+	rec1 := decision.NewRecommendation(partner, true)
+	rec2 := decision.NewRecommendation(partner, false)
+
+	mgr := NewDatastoreManager(ctx)
+
+	for _, name := range testNames {
+		err := mgr.AddName(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	mgr.AddName(testNames[0])
+	mgr.AddName(testNames[1])
+	mgr.AddName(testNames[2])
+
+	mgr.UpdateDecision(testNames[0], rec1)
+	mgr.UpdateDecision(testNames[2], rec2)
+
+	recommendedNames, err := mgr.GetRecommendedNames(usr, partner)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(recommendedNames) != 1 {
+		t.Logf("action=TestDatastorePersistenceManager_GetRecommendedNames "+"failure=incorrect number of recommended testNames returned "+"expected=1 recieved=%v", len(recommendedNames))
+		t.FailNow()
+	}
+
+	if !compareNames(testNames[0], recommendedNames[0]) {
+		t.Logf("action=TestDatastorePersistenceManager_GetRecommendedNames "+"failure=wrong name returned "+"expected=%v "+"recieved=%v ", testNames[0], recommendedNames[0])
+		t.FailNow()
+	}
+
+	deleteAllNameDetails(ctx)
+	ctx.Done()
 }
