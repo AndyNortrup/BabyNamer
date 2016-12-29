@@ -34,7 +34,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 With a [correctly configured](https://golang.org/doc/install#testing) Go toolchain:
 
 ```sh
-go get -u github.com/gorilla/mux
+go get -usr github.com/gorilla/mux
 ```
 
 ## Examples

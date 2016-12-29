@@ -18,6 +18,7 @@ func Run() {
 
 	r.HandleFunc("/", namesPage)
 	r.HandleFunc("/short-list", handleShortList)
+	r.HandleFunc("/settings", handleSettingsPage)
 	r.HandleFunc("/favicon.ico", faviconHandler)
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("templates/css"))))
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("templates/js"))))

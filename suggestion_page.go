@@ -3,6 +3,7 @@ package babynamer
 import (
 	"github.com/AndyNortrup/baby-namer/names"
 	"github.com/AndyNortrup/baby-namer/persistance"
+	"github.com/AndyNortrup/baby-namer/settings"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
@@ -15,19 +16,60 @@ type SuggestionPage struct {
 	MostOccurrences *names.Stat
 	HighestRank     *names.Stat
 	Gender          string
-	u               *user.User
+	usr             *user.User
 	data            persist.DataManager
+	lastName        *names.Name
+	IsRecommended   bool
 }
 
-func NewSuggestionPage(u *user.User, data persist.DataManager, ctx context.Context) *SuggestionPage {
-	sp := &SuggestionPage{u: u, data: data, ctx: ctx}
+func NewSuggestionPage(u *user.User,
+	data persist.DataManager,
+	ctx context.Context,
+	lastName *names.Name) *SuggestionPage {
+	sp := &SuggestionPage{usr: u, data: data, ctx: ctx, lastName: lastName}
 	return sp
 }
 
 func (sp *SuggestionPage) getName() {
-	name := sp.randomName()
+
+	name := sp.recommendedName()
+
+	if name == nil {
+		name = sp.randomName()
+	}
 	sp.addDetailsToPage(name)
 
+}
+
+func (sp *SuggestionPage) recommendedName() *names.Name {
+	sp.IsRecommended = false
+
+	self := user.Current(sp.ctx)
+	partner, err := settings.GetPartner(sp.ctx, self)
+	if err != nil {
+		return nil
+	}
+
+	uPartner := &user.User{Email: partner.PartnerEmail}
+
+	recNames, err := sp.data.GetRecommendedNames(self, uPartner)
+	if err != nil || len(recNames) == 0 {
+		return nil
+	}
+
+	if sp.lastName != nil {
+		for _, n := range recNames {
+			if n.Name != sp.lastName.Name {
+				sp.IsRecommended = true
+				return n
+			}
+		}
+	} else {
+		sp.IsRecommended = true
+		return recNames[0]
+	}
+
+	return nil
 }
 
 func (sp *SuggestionPage) randomName() *names.Name {

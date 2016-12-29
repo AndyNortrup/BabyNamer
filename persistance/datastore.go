@@ -19,7 +19,8 @@ type DatastorePersistenceManager struct {
 
 const entityTypeName string = "Name"
 const entityTypeStats string = "Stats"
-const entityTypeRecommendations = "Recommendations"
+const entityTypeRecommendations string = "Recommendations"
+
 const filterNameEquals string = "Name = "
 const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="

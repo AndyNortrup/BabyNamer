@@ -7,6 +7,7 @@ import (
 	"github.com/AndyNortrup/baby-namer/names"
 	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/AndyNortrup/baby-namer/recommendation"
+	"github.com/AndyNortrup/baby-namer/settings"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
@@ -22,10 +23,16 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 	name, rec := getDecisionFromURL(r.URL, username)
 	recordDecision(name, rec, ctx)
 
-	//Create suggestion page and render it.
-	sp := NewSuggestionPage(username, persist.NewDatastoreManager(ctx), ctx)
-	sp.getName()
-	sp.render(w)
+	partner, _ := settings.GetPartner(ctx, username)
+	if partner == nil {
+		sp := NewSettingsPage(ctx)
+		sp.Render(w)
+	} else {
+		//Create suggestion page and render it.
+		sp := NewSuggestionPage(username, persist.NewDatastoreManager(ctx), ctx, name)
+		sp.getName()
+		sp.render(w)
+	}
 }
 
 func recordDecision(name *names.Name, rec *decision.Recommendation, ctx context.Context) {
