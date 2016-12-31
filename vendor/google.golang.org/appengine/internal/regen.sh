@@ -17,7 +17,7 @@ for tool in go protoc protoc-gen-go; do
 	echo 1>&2 "$tool: $q"
 done
 
-echo -n 1>&2 "finding package dir... "
+echo -nIn 1>&2 "finding package dir... "
 pkgdir=$(go list -f '{{.Dir}}' $PKG)
 echo 1>&2 $pkgdir
 base=$(echo $pkgdir | sed "s,/$PKG\$,,")

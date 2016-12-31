@@ -37,8 +37,7 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 		Background: chart.Style{
 			Padding: chart.Box{
 				Top:   50,
-				Left:  100,
-				Right: 100,
+				Right: 50,
 			},
 		},
 		XAxis: chart.XAxis{
@@ -49,7 +48,7 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 				return time.Unix(0, int64(v.(float64))).Format("2006")
 			},
 		},
-		//YAxis: chart.YAxis{
+		//YAxisSecondary: chart.YAxis {
 		//	Name:      "Occurannces",
 		//	NameStyle: chart.StyleShow(),
 		//	Style: chart.Style{
@@ -72,7 +71,7 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 			//	XValues: dates,
 			//	YValues: occurrences,
 			//	Name:    "Occurrences",
-			//	YAxis:   chart.YAxisPrimary,
+			//	YAxis:   chart.YAxisSecondary,
 			//},
 			chart.TimeSeries{
 				XValues: dates,

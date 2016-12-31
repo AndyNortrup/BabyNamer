@@ -27,7 +27,7 @@ var genderFilter = []names.Gender{
 func TestGetName(t *testing.T) {
 	ctx := newTestContext()
 	mgr := NewDatastoreManager(ctx)
-	LoadNames(ctx)
+	LoadNames(ctx, "persistance/names")
 
 	for index, name := range testNames {
 		result, err := mgr.GetName(name, genderFilter[index])
@@ -37,13 +37,13 @@ func TestGetName(t *testing.T) {
 		}
 		checkResults(index, input[index], result, t)
 	}
-	deleteAllNameDetails(ctx)
+	clearDatastore(ctx)
 }
 
 func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 	ctx := newTestContext()
 	mgr := NewDatastoreManager(ctx)
-	LoadNames(ctx)
+	LoadNames(ctx, "persistance/names")
 
 	//Check that we get random values back
 	// Because we only have 5 names in the test data set, we need to try a few times to make sure we get one.
@@ -67,11 +67,15 @@ func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 		t.Log("No random name returned.")
 	}
 
-	deleteAllNameDetails(ctx)
+	clearDatastore(ctx)
 }
 
 func checkResults(idx int, name string, result *names.Name, t *testing.T) {
 	if result.Name != testNames[idx] {
+		t.FailNow()
+	}
+	if len(result.Stats) == 0 {
+		t.Log("No stats returned.")
 		t.FailNow()
 	}
 	if result.FirstYear().Year != first[idx] {
@@ -147,7 +151,7 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 		t.FailNow()
 	}
 
-	deleteAllNameDetails(ctx)
+	clearDatastore(ctx)
 }
 
 func getAllRecommendations(ctx context.Context) ([]*decision.Recommendation, error) {
@@ -166,7 +170,10 @@ func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
 	rec1 := decision.NewRecommendation(user1, true)
 
 	mgr := NewDatastoreManager(ctx)
-	mgr.AddName(recommendedName)
+	err := mgr.AddName(recommendedName)
+	if err != nil {
+		t.Fatalf("action=TestDataStorePersistenceManager_GetUserRecommendations error=%v", err)
+	}
 	mgr.UpdateDecision(recommendedName, rec1)
 
 	recs, _, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
@@ -187,7 +194,7 @@ func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
 		t.FailNow()
 	}
 
-	deleteAllNameDetails(ctx)
+	clearDatastore(ctx)
 	ctx.Done()
 }
 
@@ -237,6 +244,54 @@ func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
 		t.FailNow()
 	}
 
-	deleteAllNameDetails(ctx)
+	clearDatastore(ctx)
 	ctx.Done()
+}
+
+func TestDatastorePersistenceManager_addStat(t *testing.T) {
+
+	ctx := newTestContext()
+
+	nIn := names.NewName("Mary", names.Female)
+	nIn.AddStat(names.NewNameStat(1, 1, 1))
+
+	mgr := NewDatastoreManager(ctx)
+	err := mgr.AddName(nIn)
+
+	nOut, err := mgr.GetName(nIn.Name, nIn.Gender)
+	if err != nil {
+		t.Fatalf("action=TestDatastorePersistenceManager_addStat error=%v", err)
+	}
+
+	if len(nOut.Stats) != 1 {
+		t.Logf("action=TestDatastorePersistenceManager_addStat wrong number of stats returned "+"expected=1 recieved=%v", len(nOut.Stats))
+		t.FailNow()
+	}
+
+	if *nOut.Stats[1] != *nIn.Stats[1] {
+		t.Log("action=TestDatastorePersistenceManager_addStat stat not properly recorded")
+		t.FailNow()
+	}
+
+	nIn.Stats[1] = names.NewNameStat(1, 2, 2)
+	err = mgr.addStatToDatastore(nIn, nIn.Stats[1])
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nOut, err = mgr.GetName(nIn.Name, nIn.Gender)
+
+	if len(nOut.Stats) != 1 {
+		t.Log("action=TestDatastorePersistenceManager_addStat wrong number of stats returned")
+		t.FailNow()
+	}
+
+	if *nOut.Stats[1] != *nIn.Stats[1] {
+		t.Logf("action=TestDatastorePersistenceManager_addStat stat not properly recorded "+"\nexpected: %v"+"\nrecieved: %v",
+			nIn.Stats[1], nOut.Stats[1])
+		t.FailNow()
+	}
+
+	clearDatastore(ctx)
 }

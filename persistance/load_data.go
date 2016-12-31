@@ -10,45 +10,42 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 )
 
 var wg sync.WaitGroup
 
-func LoadNames(ctx context.Context) {
+func LoadNames(ctx context.Context, dir string) {
 
-	dir := "names"
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Errorf(ctx, "action=load_names %v", err)
 	}
 
-	concurrency := 2
 	input := make(chan *names.Name)
-	sem := make(chan bool)
 
+	//Try 4 because we have four cores
+	go receiveNames(ctx, input)
+	go receiveNames(ctx, input)
+	go receiveNames(ctx, input)
 	go receiveNames(ctx, input)
 
 	for _, file := range files {
-
-		if file.Mode().IsRegular() {
+		if file.Mode().IsRegular() && strings.Contains(file.Name(), ".txt") {
 			statsFile := path.Join(dir, file.Name())
 			wg.Add(1)
-			go readStatsFile(ctx, statsFile, input, sem)
+			go readStatsFile(ctx, statsFile, input)
 		}
 
 	}
 
-	for i := 0; i < concurrency; i++ {
-		sem <- true
-	}
 	wg.Wait()
 	close(input)
 }
 
-func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name, sem <-chan bool) {
+func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name) {
 	defer wg.Done()
-	defer func() { <-sem }()
 
 	file, err := os.Open(path)
 	defer file.Close()
@@ -71,6 +68,7 @@ func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name, sem 
 	}
 
 	convertLinesToStat(lines, year, ch)
+	log.Infof(ctx, "action=readStatsFile status=finished_import file=%v", path)
 }
 
 func convertFileNameToYear(p string) (int, error) {
@@ -125,4 +123,5 @@ func receiveNames(ctx context.Context, in <-chan *names.Name) {
 			log.Errorf(ctx, "Action:load_data: %v", err)
 		}
 	}
+	log.Infof(ctx, "--------------Finished importing names!-----------------")
 }

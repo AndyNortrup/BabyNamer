@@ -26,6 +26,8 @@ const filterGenderEquals string = "Gender ="
 const filterRandomNumber string = "Random >="
 const filterRecommendationUser string = "Email ="
 const filterRecommendationBool string = "Recommended ="
+const filterStatsNameKey string = "NameKey ="
+const filterStatYear string = "Year ="
 
 var NoRandomName = errors.New("No random name returned.")
 var NoNameFound = errors.New("Requested name not found.")
@@ -79,7 +81,7 @@ func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*nam
 
 func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	//Check if there is an existing name in the datastore
-	_, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
+	existingNames, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
 	if err != nil {
 		log.Errorf(mgr.ctx, "Action=add_name_to_datastore %v", err)
 	}
@@ -88,7 +90,7 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	var key *datastore.Key
 
 	//If there is an existing key for this name use it, otherwise create a new one.
-	if len(keys) > 0 {
+	if len(keys) > 0 && name != existingNames[0] {
 		key = keys[0]
 	} else {
 		key = datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
@@ -102,10 +104,13 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	}
 
 	//Add the stats
-	err = mgr.addStatsToDatastore(mgr.ctx, key, name.Stats)
-	if err != nil {
-		return err
+	for _, stat := range name.Stats {
+		err = mgr.addStatToDatastore(name, stat)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -248,7 +253,10 @@ func (mgr *DatastorePersistenceManager) executeGetNameQuery(query *datastore.Que
 	for index, name := range results {
 		out := &name.Name
 		out.Gender = names.GetGender(name.Gender)
-		mgr.getStatsForKey(out, keys[index])
+		_, err := mgr.getStatsForKey(out, keys[index])
+		if err != nil {
+			return nil, nil, err
+		}
 		result = append(result, out)
 	}
 
@@ -257,30 +265,53 @@ func (mgr *DatastorePersistenceManager) executeGetNameQuery(query *datastore.Que
 
 func (mgr *DatastorePersistenceManager) getStatsForKey(name *names.Name, key *datastore.Key) (*names.Name, error) {
 
-	statsQuery := datastore.NewQuery(entityTypeStats).Ancestor(key)
-	stats := []*names.Stat{}
+	statsQuery := datastore.NewQuery(entityTypeStats).Filter(filterStatsNameKey, name.Key())
+	stats := []*datastoreStat{}
 
 	_, err := statsQuery.GetAll(mgr.ctx, &stats)
 	if err != nil {
+		log.Errorf(mgr.ctx, "action=getStatsForKey error=err")
 		return nil, errors.New("Failed to retrieve stats: " + err.Error())
 	}
 
 	for _, stat := range stats {
-		name.AddStat(stat)
+		name.AddStat(&stat.Stat)
 	}
 	return name, nil
 }
 
-func (mgr *DatastorePersistenceManager) addStatsToDatastore(ctx context.Context,
-	parent *datastore.Key,
-	stats map[int]*names.Stat) error {
+//AddStatsToDataStore adds a instance of a stat to the datastore.  The parent names.Name object is to help generate a
+// unique key that is Name::Gender::Year (Mary::F::1889)
+func (mgr *DatastorePersistenceManager) addStatToDatastore(name *names.Name, stat *names.Stat) error {
 
-	for _, stat := range stats {
-		key := datastore.NewIncompleteKey(ctx, entityTypeStats, parent)
-		_, err := datastore.Put(ctx, key, stat)
-		if err != nil {
-			return err
-		}
+	var existingStat []*datastoreStat
+	dStat := NewDatastoreStat(name, *stat)
+	_, err := datastore.NewQuery(entityTypeStats).
+		Filter(filterStatsNameKey, name.Key()).
+		Filter(filterStatYear, stat.Year).
+		GetAll(mgr.ctx, &existingStat)
+
+	if err != nil && err != datastore.ErrNoSuchEntity {
+		log.Errorf(mgr.ctx, "action=addStatToDatastore error=%v", err)
+		return err
+	}
+
+	//No current stat for this name and year exists --> write it.
+	if existingStat == nil {
+		return mgr.putStat(dStat.newStatKey(mgr.ctx), dStat)
+	} else if *existingStat[0] != *dStat {
+		//If existing stat in the datastore doesn't match the new stat we are trying to add, then overwrite it.
+		return mgr.putStat(dStat.newStatKey(mgr.ctx), dStat)
+	}
+
+	return nil
+}
+
+func (mgr *DatastorePersistenceManager) putStat(key *datastore.Key, dStat *datastoreStat) error {
+	_, err := datastore.Put(mgr.ctx, key, dStat)
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=addStatToDatastore error=%v", err)
+		return err
 	}
 	return nil
 }

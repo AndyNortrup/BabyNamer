@@ -49,11 +49,11 @@ func (name *Name) FirstYear() *Stat {
 }
 
 func (name *Name) HighestRank() *Stat {
-	year := 0
-	for _, stat := range name.Stats {
+	var year int
+	for _, stat := range name.SortedStats() {
 		if year == 0 {
 			year = stat.Year
-		} else if stat.Rank > name.Stats[year].Rank {
+		} else if stat.Rank < name.Stats[year].Rank {
 			year = stat.Year
 		}
 	}
