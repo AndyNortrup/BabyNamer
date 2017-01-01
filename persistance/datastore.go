@@ -9,7 +9,6 @@ import (
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
 	"math/rand"
-	"strings"
 	"time"
 )
 
@@ -117,42 +116,43 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 func (mgr *DatastorePersistenceManager) GetRecommendedNames(usr, partner *user.User) ([]*names.Name, error) {
 
 	//Get all of the recommendations for this user
-	uRec, uKeys, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(usr, false))
+	uRec, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(usr, false))
 	if err != nil {
-		log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+		log.Errorf(mgr.ctx, "action=GetPartnerRecommendedNames error=%v", err)
 		return nil, err
 	}
 
 	//Add them to a map
 	nameMap := make(map[string]*decision.Recommendation)
-	for index, key := range uKeys {
-		nameMap[key.Parent().StringID()] = uRec[index]
+	for _, key := range uRec {
+		name := names.NewName(key.Name, names.GetGender(key.Gender))
+		nameMap[name.Key()] = key
 	}
 
 	//Get all of the recommendations for the user
-	_, pKeys, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(partner, true))
+	uRec, err = mgr.getUserRecommendations(mgr.getRecommendationQuery(partner, true))
 	if err != nil {
-		log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+		log.Errorf(mgr.ctx, "action=GetPartnerRecommendedNames error=%v", err)
 		return nil, err
 	}
 
-	delta := []string{}
+	delta := []*names.Name{}
 	//determine if this is a recommendation that the partner has made but the user hasn't decided on.
-	for _, key := range pKeys {
-		if nameMap[key.Parent().StringID()] == nil {
-			delta = append(delta, key.Parent().StringID())
+	for _, key := range uRec {
+		name := names.NewName(key.Name, names.GetGender(key.Gender))
+		if nameMap[name.Key()] == nil {
+			delta = append(delta, name)
 		}
 	}
 
-	result := []*names.Name{}
-	for _, stringKey := range delta {
-		parts := strings.Split(stringKey, "::")
-		nameVals, _, err := mgr.executeGetNameQuery(mgr.buildNameQuery(parts[0], names.GetGender(parts[1])))
+	result := make([]*names.Name, len(delta))
+	for index, name := range delta {
+		nameVals, _, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
 		if err != nil {
-			log.Errorf(mgr.ctx, "action=GetRecommendedNames error=%v", err)
+			log.Errorf(mgr.ctx, "action=GetPartnerRecommendedNames error=%v", err)
 		}
-		for _, name := range nameVals {
-			result = append(result, name)
+		for _, fullName := range nameVals {
+			result[index] = fullName
 		}
 	}
 
@@ -169,52 +169,45 @@ func (mgr *DatastorePersistenceManager) getRecommendationQuery(usr *user.User, a
 }
 
 func (mgr *DatastorePersistenceManager) getUserRecommendations(
-	query *datastore.Query) ([]*decision.Recommendation, []*datastore.Key, error) {
+	query *datastore.Query) ([]*decision.Recommendation, error) {
 	recommendations := []*decision.Recommendation{}
-	keys, err := query.GetAll(mgr.ctx, &recommendations)
-	return recommendations, keys, err
+	_, err := query.GetAll(mgr.ctx, &recommendations)
+	return recommendations, err
 }
 
-func (mgr *DatastorePersistenceManager) UpdateDecision(name *names.Name, d *decision.Recommendation) error {
-	_, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
-
+func (mgr *DatastorePersistenceManager) UpdateDecision(rec *decision.Recommendation) error {
+	keys, err := mgr.getDecisions(rec)
 	if err != nil {
-		log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err.Error())
 		return err
 	}
 
 	if len(keys) > 0 {
 		for _, key := range keys {
-			decisionKeys, err := mgr.getDecisions(key, d)
+			_, err = datastore.Put(mgr.ctx, key, rec)
 			if err != nil {
+				log.Errorf(mgr.ctx, "action=UpdateDeecision error=%v", err)
 				return err
 			}
-
-			if len(decisionKeys) > 0 {
-				for _, decisionKey := range decisionKeys {
-					_, err := datastore.Put(mgr.ctx, decisionKey, d)
-					if err != nil {
-						log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err)
-						return err
-					}
-				}
-			} else {
-				err := mgr.writeNewDecision(key, d)
-				if err != nil {
-					log.Errorf(mgr.ctx, "action=UpdateDecision error=%v", err)
-					return err
-				}
-			}
 		}
-
+	} else {
+		key := datastore.NewIncompleteKey(mgr.ctx, entityTypeRecommendations, nil)
+		_, err = datastore.Put(mgr.ctx, key, rec)
+		if err != nil {
+			log.Errorf(mgr.ctx, "action=UpdateDeecision error=%v", err)
+			return err
+		}
 	}
+
 	return nil
 }
 
-func (mgr *DatastorePersistenceManager) getDecisions(ancestor *datastore.Key, decision *decision.Recommendation) ([]*datastore.Key, error) {
+func (mgr *DatastorePersistenceManager) getDecisions(rec *decision.Recommendation) ([]*datastore.Key, error) {
 	//get decisions
 	query := datastore.NewQuery(entityTypeRecommendations).
-		Ancestor(ancestor).Filter(filterRecommendationUser, decision.Email).KeysOnly()
+		Filter(filterRecommendationUser, rec.Email).
+		Filter(filterNameEquals, rec.Name).Filter(filterGenderEquals, rec.Gender).
+		KeysOnly()
+
 	results := make([]interface{}, 0)
 	decisionKeys, err := query.GetAll(mgr.ctx, results)
 	if err != nil {
@@ -318,4 +311,23 @@ func (mgr *DatastorePersistenceManager) putStat(key *datastore.Key, dStat *datas
 
 func randomFloat() float32 {
 	return rand.New(rand.NewSource(time.Now().Unix())).Float32()
+}
+
+func (mgr *DatastorePersistenceManager) GetNameRecommendations(
+	user *user.User,
+	name *names.Name) ([]*decision.Recommendation, error) {
+
+	recs := []*decision.Recommendation{}
+	_, err := datastore.NewQuery(entityTypeRecommendations).
+		Filter(filterRecommendationUser, user.Email).
+		Filter(filterNameEquals, name.Name).
+		Filter(filterGenderEquals, name.Gender.GoString()).
+		GetAll(mgr.ctx, &recs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return recs, nil
+
 }

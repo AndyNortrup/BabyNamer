@@ -6,15 +6,17 @@ import (
 )
 
 type Recommendation struct {
+	Name        string
+	Gender      string
 	Email       string
 	Recommended bool
 }
 
-func NewRecommendation(user *user.User, recommended bool) *Recommendation {
-	return &Recommendation{Email: user.Email, Recommended: recommended}
-}
-
-type RecommendationList struct {
-	Name      names.Name
-	Decisions []*Recommendation
+func NewRecommendation(user *user.User, name *names.Name, recommended bool) *Recommendation {
+	return &Recommendation{
+		Email:       user.Email,
+		Recommended: recommended,
+		Name:        name.Name,
+		Gender:      name.Gender.GoString(),
+	}
 }

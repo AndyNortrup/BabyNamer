@@ -19,9 +19,12 @@ func TestSuggestionPage_RandomPage(t *testing.T) {
 	defer done()
 
 	mpm := &mockPersistenceManager{randCount: 0}
-	sp := NewSuggestionPage(u, mpm, ctx)
+	sp := NewSuggestionPage(u, mpm, ctx, nil)
 	for x := 0; x < len(randomNames); x++ {
-		rndName := sp.randomName()
+		rndName, err := sp.randomName()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 
 		if rndName != randomNames[x] {
 			t.Fail()
@@ -37,11 +40,11 @@ type mockPersistenceManager struct {
 	randCount int
 }
 
-func (*mockPersistenceManager) AddName(name *names.Name) error {
+func (mpm *mockPersistenceManager) AddName(name *names.Name) error {
 	panic("implement me")
 }
 
-func (*mockPersistenceManager) GetName(name string, gender names.Gender) (*names.Name, error) {
+func (mpm *mockPersistenceManager) GetName(name string, gender names.Gender) (*names.Name, error) {
 	panic("implement me")
 }
 
@@ -54,10 +57,18 @@ func (mpm *mockPersistenceManager) GetRandomName(names.Gender) (*names.Name, err
 	return resultName, resultError
 }
 
-func (*mockPersistenceManager) GetRecommendedNames(user, partner *user.User) ([]*names.Name, error) {
+func (mpm *mockPersistenceManager) GetPartnerRecommendedNames(user, partner *user.User) ([]*names.Name, error) {
 	panic("implement me")
 }
 
-func (*mockPersistenceManager) UpdateDecision(*names.Name, *decision.Recommendation) error {
+func (mpm *mockPersistenceManager) UpdateDecision(*decision.Recommendation) error {
 	panic("implement me")
+}
+
+func (mpm *mockPersistenceManager) GetNameRecommendations(
+	user *user.User,
+	name *names.Name) ([]*decision.Recommendation, error) {
+
+	panic("not implemented")
+
 }

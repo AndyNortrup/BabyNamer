@@ -37,13 +37,12 @@ func namesPage(w http.ResponseWriter, r *http.Request) {
 
 func recordDecision(name *names.Name, rec *decision.Recommendation, ctx context.Context) {
 	nameMgr := persist.NewDatastoreManager(ctx)
-	err := nameMgr.UpdateDecision(name, rec)
+	err := nameMgr.UpdateDecision(rec)
 	if err != nil {
 		log.Errorf(ctx, "action=recordDecision error=%v", err)
 	} else {
-		log.Infof(ctx, "action=recordDecision name=%v recommendation=%v", name, rec)
+		log.Infof(ctx, "action=recordDecision name=%v recommendation=%v", rec.Name, rec)
 	}
-
 }
 
 func getDecisionFromURL(url *url.URL, usr *user.User) (*names.Name, *decision.Recommendation) {
@@ -58,7 +57,7 @@ func getDecisionFromURL(url *url.URL, usr *user.User) (*names.Name, *decision.Re
 	} else {
 		d = false
 	}
-	dec := decision.NewRecommendation(usr, d)
+	dec := decision.NewRecommendation(usr, name, d)
 
 	return name, dec
 }

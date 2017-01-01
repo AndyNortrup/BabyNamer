@@ -35,7 +35,8 @@ func (sp *SuggestionPage) getName() {
 	name := sp.recommendedName()
 
 	if name == nil {
-		name = sp.randomName()
+		//Todo: better management of errors to the front end.
+		name, _ = sp.randomName()
 	}
 	sp.addDetailsToPage(name)
 
@@ -52,7 +53,7 @@ func (sp *SuggestionPage) recommendedName() *names.Name {
 
 	uPartner := &user.User{Email: partner.PartnerEmail}
 
-	recNames, err := sp.data.GetRecommendedNames(self, uPartner)
+	recNames, err := sp.data.GetPartnerRecommendedNames(self, uPartner)
 	if err != nil || len(recNames) == 0 {
 		return nil
 	}
@@ -72,13 +73,24 @@ func (sp *SuggestionPage) recommendedName() *names.Name {
 	return nil
 }
 
-func (sp *SuggestionPage) randomName() *names.Name {
-	name, err := sp.data.GetRandomName(names.Female)
-	if err != nil {
-		log.Errorf(sp.ctx, err.Error())
-		return nil
+func (sp *SuggestionPage) randomName() (*names.Name, error) {
+	needName := true
+
+	for needName {
+		name, err := sp.data.GetRandomName(names.Female)
+		if err != nil {
+			log.Errorf(sp.ctx, err.Error())
+			return nil, err
+		}
+		recs, err := sp.data.GetNameRecommendations(sp.usr, name)
+		if err != nil {
+			return nil, err
+		}
+		if len(recs) == 0 {
+			return name, err
+		}
 	}
-	return name
+	return nil, nil
 }
 
 func (sp *SuggestionPage) addDetailsToPage(name *names.Name) {

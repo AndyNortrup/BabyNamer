@@ -105,14 +105,14 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 
 	data := NewDatastoreManager(ctx)
 	name := names.NewName("Mary", names.Female)
-	rec := decision.NewRecommendation(usr, true)
+	rec := decision.NewRecommendation(usr, name, true)
 
 	err := data.AddName(name)
 	if err != nil {
 		t.Fatalf("action=TestDatastorePersistenceManager_UpdateDecision error=%v", err)
 	}
 
-	err = data.UpdateDecision(name, rec)
+	err = data.UpdateDecision(rec)
 	if err != nil {
 		t.Fatalf("action=TestUpdateDecision error=%v", err)
 	}
@@ -123,7 +123,7 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 	}
 
 	if len(out) == 0 {
-		t.Logf("action=TestDatastorePersistenceManager_UpdateDecision no recommendations retrived "+"Recieved=%v", len(out))
+		t.Logf("action=TestDatastorePersistenceManager_UpdateDecision "+"no recommendations retrived "+"Recieved=%v", len(out))
 		t.FailNow()
 	}
 
@@ -134,7 +134,7 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 	}
 
 	rec.Recommended = false
-	data.UpdateDecision(name, rec)
+	data.UpdateDecision(rec)
 	out, err = getAllRecommendations(ctx)
 	if err != nil {
 		t.Fatalf("action=TestDatastorePersistenceManager_UpdateDecision error=%v", err)
@@ -167,16 +167,16 @@ func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
 	recommendedName := names.NewName("Recommended", names.Female)
 
 	user1 := &user.User{Email: "user1@test.com"}
-	rec1 := decision.NewRecommendation(user1, true)
+	rec1 := decision.NewRecommendation(user1, recommendedName, true)
 
 	mgr := NewDatastoreManager(ctx)
 	err := mgr.AddName(recommendedName)
 	if err != nil {
 		t.Fatalf("action=TestDataStorePersistenceManager_GetUserRecommendations error=%v", err)
 	}
-	mgr.UpdateDecision(recommendedName, rec1)
+	mgr.UpdateDecision(rec1)
 
-	recs, _, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
+	recs, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
 	if err != nil {
 		t.Fatalf("action=TestDataStorePersistenceManager_GetUserRecommendations "+"error=%v", err)
 	}
@@ -187,8 +187,8 @@ func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
 	}
 
 	rec1.Recommended = false
-	mgr.UpdateDecision(recommendedName, rec1)
-	recs, _, err = mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
+	mgr.UpdateDecision(rec1)
+	recs, err = mgr.getUserRecommendations(mgr.getRecommendationQuery(user1, true))
 	if len(recs) != 0 {
 		t.Logf("action=TestDataStorePersistenceManager_GetUserRecommendations "+"incorrect number of recommendations expected=0"+"recieved=%v", len(recs))
 		t.FailNow()
@@ -210,8 +210,8 @@ func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
 	usr := &user.User{Email: "usr@test.com"}
 	partner := &user.User{Email: "partner@test.com"}
 
-	rec1 := decision.NewRecommendation(partner, true)
-	rec2 := decision.NewRecommendation(partner, false)
+	rec1 := decision.NewRecommendation(partner, testNames[0], true)
+	rec2 := decision.NewRecommendation(partner, testNames[1], false)
 
 	mgr := NewDatastoreManager(ctx)
 
@@ -226,8 +226,8 @@ func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
 	mgr.AddName(testNames[1])
 	mgr.AddName(testNames[2])
 
-	mgr.UpdateDecision(testNames[0], rec1)
-	mgr.UpdateDecision(testNames[2], rec2)
+	mgr.UpdateDecision(rec1)
+	mgr.UpdateDecision(rec2)
 
 	recommendedNames, err := mgr.GetRecommendedNames(usr, partner)
 	if err != nil {
@@ -290,6 +290,41 @@ func TestDatastorePersistenceManager_addStat(t *testing.T) {
 	if *nOut.Stats[1] != *nIn.Stats[1] {
 		t.Logf("action=TestDatastorePersistenceManager_addStat stat not properly recorded "+"\nexpected: %v"+"\nrecieved: %v",
 			nIn.Stats[1], nOut.Stats[1])
+		t.FailNow()
+	}
+
+	clearDatastore(ctx)
+}
+
+func TestDatastorePersistanceManager_GetNameRecommendations(t *testing.T) {
+	usr := &user.User{Email: "test@test.com"}
+	decided := names.NewName("decided", names.Female)
+	undecided := names.NewName("undecided", names.Female)
+
+	ctx := newTestContext()
+	mgr := NewDatastoreManager(ctx)
+	mgr.AddName(decided)
+	mgr.AddName(undecided)
+	rec := decision.NewRecommendation(usr, decided, true)
+	mgr.UpdateDecision(rec)
+
+	recOut, err := mgr.GetNameRecommendations(usr, decided)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(recOut) != 1 {
+		t.Log("action=TestDatastorePersistanceManager_GetNameRecommendations wrong recommendation count returned")
+		t.FailNow()
+	}
+
+	recOut, err = mgr.GetNameRecommendations(usr, undecided)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(recOut) != 0 {
+		t.Log("action=TestDatastorePersistanceManager_GetNameRecommendations wrong recommendation count returned")
 		t.FailNow()
 	}
 

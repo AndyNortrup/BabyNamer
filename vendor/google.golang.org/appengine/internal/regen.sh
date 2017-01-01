@@ -36,5 +36,5 @@ for f in $(find $PKG/internal -name '*.pb.go'); do
   # are used on classic App Engine. proto.RegisterEnum only affects
   # parsing the text format; we don't care about that.
   # https://code.google.com/p/googleappengine/issues/detail?id=11670#c17
-  sed -i '/proto.RegisterEnum/d' $f
+  sed -i '/proto.RegisterEnum/rec' $f
 done
