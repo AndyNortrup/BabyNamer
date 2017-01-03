@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+//TODO: Replace datastore with nds
 type DatastorePersistenceManager struct {
 	ctx context.Context
 }
@@ -78,25 +79,13 @@ func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*nam
 	return results[0], err
 }
 
+//AddName writes a name to the datastore. It always overwrites a previous entity with the same key (Name::Gender)
 func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
-	//Check if there is an existing name in the datastore
-	existingNames, keys, err := mgr.executeGetNameQuery(mgr.buildNameQuery(name.Name, name.Gender))
-	if err != nil {
-		log.Errorf(mgr.ctx, "Action=add_name_to_datastore %v", err)
-	}
-
 	dName := newDatastoreName(name)
-	var key *datastore.Key
-
-	//If there is an existing key for this name use it, otherwise create a new one.
-	if len(keys) > 0 && name != existingNames[0] {
-		key = keys[0]
-	} else {
-		key = datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
-	}
+	key := datastore.NewKey(mgr.ctx, entityTypeName, dName.Key(), 0, nil)
 
 	//Put the name in the datastore.
-	key, err = datastore.Put(mgr.ctx, key, dName)
+	_, err := datastore.Put(mgr.ctx, key, dName)
 	if err != nil {
 		log.Errorf(mgr.ctx, "Failed to put name %v into datastore: %v", name.Name, err)
 		return err
@@ -113,7 +102,7 @@ func (mgr *DatastorePersistenceManager) AddName(name *names.Name) error {
 	return nil
 }
 
-func (mgr *DatastorePersistenceManager) GetRecommendedNames(usr, partner *user.User) ([]*names.Name, error) {
+func (mgr *DatastorePersistenceManager) GetPartnerRecommendedNames(usr, partner *user.User) ([]*names.Name, error) {
 
 	//Get all of the recommendations for this user
 	uRec, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(usr, false))
@@ -175,27 +164,19 @@ func (mgr *DatastorePersistenceManager) getUserRecommendations(
 	return recommendations, err
 }
 
+//UpdateDecision records the decision in the entity type Recommendations with a string key Name::Gender::UserEmail
+// Mary::F::andrew.nortrup@gmail.com.  This overwrites any previous decisions by this user for the name.
 func (mgr *DatastorePersistenceManager) UpdateDecision(rec *decision.Recommendation) error {
-	keys, err := mgr.getDecisions(rec)
-	if err != nil {
-		return err
-	}
+	key := datastore.NewKey(mgr.ctx,
+		entityTypeRecommendations,
+		rec.Name+"::"+rec.Gender+"::"+rec.Email,
+		0,
+		nil)
 
-	if len(keys) > 0 {
-		for _, key := range keys {
-			_, err = datastore.Put(mgr.ctx, key, rec)
-			if err != nil {
-				log.Errorf(mgr.ctx, "action=UpdateDeecision error=%v", err)
-				return err
-			}
-		}
-	} else {
-		key := datastore.NewIncompleteKey(mgr.ctx, entityTypeRecommendations, nil)
-		_, err = datastore.Put(mgr.ctx, key, rec)
-		if err != nil {
-			log.Errorf(mgr.ctx, "action=UpdateDeecision error=%v", err)
-			return err
-		}
+	_, err := datastore.Put(mgr.ctx, key, rec)
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=UpdateDeecision error=%v", err)
+		return err
 	}
 
 	return nil
@@ -217,16 +198,6 @@ func (mgr *DatastorePersistenceManager) getDecisions(rec *decision.Recommendatio
 	return decisionKeys, nil
 }
 
-func (mgr *DatastorePersistenceManager) writeNewDecision(parent *datastore.Key, decision *decision.Recommendation) error {
-	decisionKey := datastore.NewIncompleteKey(mgr.ctx, entityTypeRecommendations, parent)
-	_, err := datastore.Put(mgr.ctx, decisionKey, decision)
-	if err != nil {
-		log.Errorf(mgr.ctx, "action=writeNewDecision error=%v", err)
-		return err
-	}
-	return nil
-}
-
 func (mgr *DatastorePersistenceManager) buildNameQuery(name string, gender names.Gender) *datastore.Query {
 	return datastore.NewQuery(entityTypeName).
 		Filter(filterNameEquals, name).
@@ -234,7 +205,6 @@ func (mgr *DatastorePersistenceManager) buildNameQuery(name string, gender names
 }
 
 func (mgr *DatastorePersistenceManager) executeGetNameQuery(query *datastore.Query) ([]*names.Name, []*datastore.Key, error) {
-
 	results := []*datastoreName{}
 	keys, err := query.GetAll(mgr.ctx, &results)
 
@@ -273,31 +243,11 @@ func (mgr *DatastorePersistenceManager) getStatsForKey(name *names.Name, key *da
 	return name, nil
 }
 
-//AddStatsToDataStore adds a instance of a stat to the datastore.  The parent names.Name object is to help generate a
+//AddStatsToDataStore adds a instance of a stat to the datastore.  The parent names.Name object is to generate a
 // unique key that is Name::Gender::Year (Mary::F::1889)
 func (mgr *DatastorePersistenceManager) addStatToDatastore(name *names.Name, stat *names.Stat) error {
-
-	var existingStat []*datastoreStat
 	dStat := NewDatastoreStat(name, *stat)
-	_, err := datastore.NewQuery(entityTypeStats).
-		Filter(filterStatsNameKey, name.Key()).
-		Filter(filterStatYear, stat.Year).
-		GetAll(mgr.ctx, &existingStat)
-
-	if err != nil && err != datastore.ErrNoSuchEntity {
-		log.Errorf(mgr.ctx, "action=addStatToDatastore error=%v", err)
-		return err
-	}
-
-	//No current stat for this name and year exists --> write it.
-	if existingStat == nil {
-		return mgr.putStat(dStat.newStatKey(mgr.ctx), dStat)
-	} else if *existingStat[0] != *dStat {
-		//If existing stat in the datastore doesn't match the new stat we are trying to add, then overwrite it.
-		return mgr.putStat(dStat.newStatKey(mgr.ctx), dStat)
-	}
-
-	return nil
+	return mgr.putStat(dStat.newStatKey(mgr.ctx), dStat)
 }
 
 func (mgr *DatastorePersistenceManager) putStat(key *datastore.Key, dStat *datastoreStat) error {

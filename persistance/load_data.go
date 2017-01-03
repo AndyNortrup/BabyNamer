@@ -121,6 +121,9 @@ func receiveNames(ctx context.Context, in <-chan *names.Name) {
 		err := data.AddName(name)
 		if err != nil {
 			log.Errorf(ctx, "Action:load_data: %v", err)
+		} else {
+			log.Infof(ctx, "Action:receiveNames name:%v\t year:%v\t rank: %v", name.Name,
+				name.SortedStats()[0].Year, name.SortedStats()[0].Rank)
 		}
 	}
 	log.Infof(ctx, "--------------Finished importing names!-----------------")
