@@ -25,6 +25,8 @@ func Run() {
 	r.PathPrefix("/fonts/").Handler(http.StripPrefix("/fonts/", http.FileServer(http.Dir("templates/fonts"))))
 
 	r.HandleFunc("/admin/load_ssa_data", persist.HandleLoadData)
+	r.HandleFunc(persist.HandleReadStatsTask, persist.HandleReadStatsFile)
+
 	r.HandleFunc("/charts/{name}/{gender}", handleChart)
 
 	http.Handle("/", r)

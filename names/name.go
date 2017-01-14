@@ -60,6 +60,18 @@ func (name *Name) HighestRank() *Stat {
 	return name.Stats[year]
 }
 
+func (name *Name) LowestRank() *Stat {
+	var year int
+	for _, stat := range name.SortedStats() {
+		if year == 0 {
+			year = stat.Year
+		} else if stat.Rank > name.Stats[year].Rank {
+			year = stat.Year
+		}
+	}
+	return name.Stats[year]
+}
+
 func (name *Name) MostOccurrences() *Stat {
 	year := 0
 	for _, stat := range name.Stats {

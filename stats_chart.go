@@ -65,6 +65,11 @@ func (sc *StatsChart) RenderChart(w http.ResponseWriter, ctx context.Context) {
 			ValueFormatter: func(v interface{}) string {
 				return strconv.Itoa(int(v.(float64)))
 			},
+			Range: &chart.ContinuousRange{
+				Descending: true,
+				//Min: 1,
+				//Max: float64(sc.Name.LowestRank().Year),
+			},
 		},
 		Series: []chart.Series{
 			//chart.TimeSeries{

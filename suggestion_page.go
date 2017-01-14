@@ -32,14 +32,23 @@ func NewSuggestionPage(u *user.User,
 
 func (sp *SuggestionPage) getName() {
 
-	name := sp.recommendedName()
+	var name *names.Name
+	good := false
 
-	if name == nil {
-		//Todo: better management of errors to the front end.
-		name, _ = sp.randomName()
+	for !good {
+		name = sp.recommendedName()
+
+		if name == nil {
+			//Todo: better management of errors to the front end.
+			name, _ = sp.randomName()
+		}
+
+		if len(name.Stats) > 1 {
+			good = true
+		}
 	}
-	sp.addDetailsToPage(name)
 
+	sp.addDetailsToPage(name)
 }
 
 func (sp *SuggestionPage) recommendedName() *names.Name {

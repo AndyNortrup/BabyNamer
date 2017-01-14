@@ -3,15 +3,21 @@ package persist
 import (
 	"encoding/csv"
 	"github.com/AndyNortrup/baby-namer/names"
-	"io/ioutil"
+	//"io/ioutil"
 
+	"github.com/qedus/nds"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
 	"os"
 	"path"
 	"strconv"
-	"strings"
 	"sync"
+
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/taskqueue"
+	"io/ioutil"
+	"net/url"
+	"strings"
 )
 
 var wg sync.WaitGroup
@@ -27,15 +33,19 @@ func LoadNames(ctx context.Context, dir string) {
 
 	//Try 4 because we have four cores
 	go receiveNames(ctx, input)
-	go receiveNames(ctx, input)
-	go receiveNames(ctx, input)
-	go receiveNames(ctx, input)
 
 	for _, file := range files {
 		if file.Mode().IsRegular() && strings.Contains(file.Name(), ".txt") {
 			statsFile := path.Join(dir, file.Name())
-			wg.Add(1)
-			go readStatsFile(ctx, statsFile, input)
+			urlVal := url.Values{}
+			urlVal.Add(formValueFilePath, statsFile)
+			t := taskqueue.NewPOSTTask(HandleReadStatsTask, urlVal)
+			_, err := taskqueue.Add(ctx, t, "")
+			if err != nil {
+				log.Errorf(ctx, "action=LoadNames task_name=%v error=%v", statsFile, err)
+			} else {
+				log.Infof(ctx, "action=LoadNames task_name=%v result=queued", statsFile)
+			}
 		}
 
 	}
@@ -44,9 +54,10 @@ func LoadNames(ctx context.Context, dir string) {
 	close(input)
 }
 
-func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name) {
-	defer wg.Done()
+func readStatsFile(ctx context.Context, path string) {
+	//defer wg.Done()
 
+	log.Infof(ctx, "action=readStatsFile status=start_import file=%v", path)
 	file, err := os.Open(path)
 	defer file.Close()
 
@@ -67,7 +78,7 @@ func readStatsFile(ctx context.Context, path string, ch chan<- *names.Name) {
 		return
 	}
 
-	convertLinesToStat(lines, year, ch)
+	convertLinesToStat(ctx, lines, year)
 	log.Infof(ctx, "action=readStatsFile status=finished_import file=%v", path)
 }
 
@@ -78,7 +89,7 @@ func convertFileNameToYear(p string) (int, error) {
 
 func readLines(file *os.File) ([][]string, error) {
 	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = 3
+	reader.FieldsPerRecord = 4
 	return reader.ReadAll()
 }
 
@@ -88,20 +99,50 @@ func readLines(file *os.File) ([][]string, error) {
 // [1] = Gender (M/F)
 // [2] = Number of occurrences that year
 
-func convertLinesToStat(lines [][]string, year int, out chan<- *names.Name) {
-	var m, f int
+func convertLinesToStat(ctx context.Context, lines [][]string, year int) {
+
+	wg := &sync.WaitGroup{}
+	var maxOps = 50
+	sem := make(chan bool, maxOps)
+
 	for _, line := range lines {
-		name := names.NewName(line[0], names.GetGender(line[1]))
-		occurrence := extractOccurrences(line)
-		if line[1] == "M" {
-			m++
-			name.AddStat(names.NewNameStat(year, m, occurrence))
-		} else {
-			f++
-			name.AddStat(names.NewNameStat(year, f, occurrence))
-		}
-		out <- name
+		wg.Add(1)
+
+		go func(ctx context.Context, line []string, year int) {
+			defer wg.Done()
+			name := names.NewName(line[0], names.GetGender(line[1]))
+			stat := extractStatFromLine(line, year)
+			name.AddStat(stat)
+
+			dName := newDatastoreName(name)
+			_, err := nds.Put(ctx, datastore.NewKey(ctx, entityTypeName, name.Key(), 0, nil), dName)
+			if err != nil {
+				log.Errorf(ctx, "action=convertLinesToStat err=%v", err)
+			}
+			_, err = nds.Put(ctx,
+				datastore.NewKey(ctx, entityTypeStats, name.Key()+"::"+strconv.Itoa(stat.Year), 0, nil),
+				stat)
+			if err != nil {
+				log.Errorf(ctx, "action=convertLinesToStat err=%v", err)
+			} else {
+				log.Debugf(ctx, "action=convertLinesToStat stat=%v", stat)
+			}
+			sem <- true
+		}(ctx, line, year)
+		<-sem
 	}
+
+	//for i := 0; i < cap(sem); i++ {
+	//	<-sem
+	//}
+
+	wg.Wait()
+}
+func extractStatFromLine(line []string, year int) *names.Stat {
+	occurrence := extractOccurrences(line)
+	rank := extractRank(line)
+	stat := names.NewNameStat(year, rank, occurrence)
+	return stat
 }
 
 // extractOccurrences pulls the occurrence field from the line and converts it to an integer.  Returns zero in the case
@@ -114,11 +155,23 @@ func extractOccurrences(line []string) int {
 	return occurrence
 }
 
+func extractRank(line []string) int {
+	occurrence, err := strconv.Atoi(line[3])
+	if err != nil {
+		occurrence = 0
+	}
+	return occurrence
+}
+
 func receiveNames(ctx context.Context, in <-chan *names.Name) {
-	data := NewDatastoreManager(ctx)
+	//data := NewDatastoreManager(ctx)
 
 	for name := range in {
-		err := data.AddName(name)
+		dName := newDatastoreName(name)
+
+		//err := data.AddName(name)
+		key := datastore.NewKey(ctx, entityTypeName, name.Key(), 0, nil)
+		_, err := nds.Put(ctx, key, dName)
 		if err != nil {
 			log.Errorf(ctx, "Action:load_data: %v", err)
 		} else {

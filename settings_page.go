@@ -12,8 +12,9 @@ import (
 const partnerEmailFormID = "PartnerEmail"
 
 type SettingsPage struct {
-	Partner *settings.Partner
-	ctx     context.Context
+	Partner      *settings.Partner
+	PartnerEmail string
+	ctx          context.Context
 }
 
 func NewSettingsPage(ctx context.Context) *SettingsPage {
@@ -51,5 +52,6 @@ func handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sp := NewSettingsPage(ctx)
+	sp.PartnerEmail = r.PostFormValue(partnerEmailFormID)
 	sp.Render(w)
 }
