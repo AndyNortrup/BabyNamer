@@ -12,7 +12,7 @@ var lineStrings [][]string = [][]string{{"Mary", "F", "7065"},
 
 func TestReadLines(t *testing.T) {
 
-	testFilePath := "persistance/names/yob1880.txt"
+	testFilePath := "names/yob1880.txt"
 	file, err := os.Open(testFilePath)
 	if err != nil {
 		t.Fatalf("action=TestReadLines error=%v", err.Error())
@@ -30,21 +30,21 @@ func TestReadLines(t *testing.T) {
 
 }
 
-func TestConvertLineToStat(t *testing.T) {
-	out := make(chan *names.Name)
-	in := make(chan *names.Name)
-
-	go convertLinesToStat(lineStrings, 1880, out)
-	go nameValues(in)
-	for x := 0; x < 3; x++ {
-		compare := <-in
-		name := <-out
-		if !compareNames(name, compare) {
-			t.Fail()
-			t.Logf("action=TestConvertLineToStat \nexpected=%#v \nrecieved=%#v", compare, name)
-		}
-	}
-}
+//func TestConvertLineToStat(t *testing.T) {
+//	out := make(chan *names.Name)
+//	in := make(chan *names.Name)
+//
+//	go convertLinesToStat(lineStrings, 1880, out)
+//	go nameValues(in)
+//	for x := 0; x < 3; x++ {
+//		compare := <-in
+//		name := <-out
+//		if !compareNames(name, compare) {
+//			t.Fail()
+//			t.Logf("action=TestConvertLineToStat \nexpected=%#v \nrecieved=%#v", compare, name)
+//		}
+//	}
+//}
 
 func nameValues(out chan<- *names.Name) {
 	defer close(out)

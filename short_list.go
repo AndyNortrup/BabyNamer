@@ -1,42 +1,64 @@
 package babynamer
 
 import (
+	"github.com/AndyNortrup/baby-namer/names"
+	"github.com/AndyNortrup/baby-namer/persistance"
+	"github.com/AndyNortrup/baby-namer/settings"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/user"
 	"sort"
 )
 
-type ShortList []*NameDetails
+func getShortList(ctx context.Context) (names.NameList, error) {
 
-func getShortList(ctx context.Context) (ShortList, error) {
-	list := make(ShortList, 0)
-
-	query := datastore.NewQuery(EntityTypeNameDetails).
-		Filter("ApprovedBy >", "").
-		Filter("RejectedBy =", "")
-
-	for i := query.Run(ctx); ; {
-		detail := &NameDetails{}
-		_, err := i.Next(detail)
-		if err == datastore.Done {
-			sort.Sort(list)
-			return list, nil
-		} else if err != nil {
-			return nil, err
-		} else {
-			list = append(list, detail)
-		}
+	oldList, err := getDeprecatedShortList(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	shortList, err := getPersistenceShortList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	shortList = append(shortList, oldList...)
+	sort.Sort(shortList)
+
+	return shortList, nil
+
 }
 
-func (list ShortList) Len() int {
-	return len(list)
+func getPersistenceShortList(ctx context.Context) (names.NameList, error) {
+	mgr := persist.NewDatastoreManager(ctx)
+	usr := user.Current(ctx)
+	partner, err := settings.GetPartner(ctx, usr)
+	if err != nil {
+		log.Errorf(ctx, "action=getShortList step=getPartner err=%v", err)
+		return nil, err
+	}
+	shortList, err := mgr.GetShortList(usr, &user.User{Email: partner.PartnerEmail})
+	if err != nil {
+		log.Errorf(ctx, "action=getShortList step=GetShortList err=%v", err)
+		return nil, err
+	}
+	return shortList, nil
 }
 
-func (list ShortList) Less(i, j int) bool {
-	return list[i].Name < list[j].Name
-}
+func getDeprecatedShortList(ctx context.Context) (names.NameList, error) {
+	list := []*NameDetails{}
+	_, err := datastore.NewQuery(EntityTypeNameDetails).
+		Filter("ApprovedBy >", "").
+		Filter("RejectedBy =", "").GetAll(ctx, &list)
 
-func (list ShortList) Swap(i, j int) {
-	list[i], list[j] = list[j], list[i]
+	outList := names.NameList{}
+	for _, value := range list {
+		outList = append(outList, &names.Name{
+			Name:   value.Name,
+			Gender: names.GetGender(value.Gender),
+		})
+	}
+
+	return outList, err
 }

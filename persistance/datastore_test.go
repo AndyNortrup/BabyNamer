@@ -229,7 +229,7 @@ func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
 	mgr.UpdateDecision(rec1)
 	mgr.UpdateDecision(rec2)
 
-	recommendedNames, err := mgr.GetRecommendedNames(usr, partner)
+	recommendedNames, err := mgr.GetPartnerRecommendedNames(usr, partner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,5 +328,60 @@ func TestDatastorePersistanceManager_GetNameRecommendations(t *testing.T) {
 		t.FailNow()
 	}
 
+	clearDatastore(ctx)
+}
+
+func TestDatastorePersistenceManager_GetShortList(t *testing.T) {
+	t.Log("action=TestDatastorePersistenceManager_GetShortList")
+	usr := &user.User{Email: "test@test.com"}
+	partner := &user.User{Email: "partner@test.com"}
+	ctx := newTestContext()
+
+	mgr := NewDatastoreManager(ctx)
+
+	onTheList := &names.Name{Name: "Elena", Gender: names.Female}
+	mgr.AddName(onTheList)
+	err := mgr.UpdateDecision(decision.NewRecommendation(usr, onTheList, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mgr.UpdateDecision(decision.NewRecommendation(partner, onTheList, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	notOnTheList := &names.Name{Name: "Ruben", Gender: names.Male}
+	err = mgr.AddName(notOnTheList)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userRec := &names.Name{Name: "Jennefer", Gender: names.Female}
+	err = mgr.AddName(userRec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mgr.UpdateDecision(decision.NewRecommendation(usr, userRec, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	partnerRec := &names.Name{Name: "Elenor", Gender: names.Female}
+	err = mgr.AddName(partnerRec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mgr.UpdateDecision(decision.NewRecommendation(partner, partnerRec, true))
+
+	shortList, err := mgr.GetShortList(usr, partner)
+	if len(shortList) != 1 {
+		t.Logf("Wrong number of arguments returned. Expected=1 Recieved=%v", len(shortList))
+		t.FailNow()
+	}
+
+	if shortList[0].Name != onTheList.Name {
+		t.Logf("Wrong name returned.  Expected=%v, Recieved=%v", onTheList.Name, shortList[0].Name)
+		t.FailNow()
+	}
 	clearDatastore(ctx)
 }

@@ -281,3 +281,38 @@ func (mgr *DatastorePersistenceManager) GetNameRecommendations(
 	return recs, nil
 
 }
+
+//
+func (mgr *DatastorePersistenceManager) GetShortList(usr, partner *user.User) (names.NameList, error) {
+	userRecommendations, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(usr, true))
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=GetShortList step=partner error=%v", err)
+		return nil, err
+	}
+
+	userRecMap := make(map[string]*decision.Recommendation)
+
+	for _, rec := range userRecommendations {
+		userRecMap[rec.Name] = rec
+	}
+
+	partnerRecommendations, err := mgr.getUserRecommendations(mgr.getRecommendationQuery(partner, true))
+	if err != nil {
+		log.Errorf(mgr.ctx, "action=GetShortList step=partner error=%v", err)
+		return nil, err
+	}
+
+	intersectList := names.NameList{}
+	for _, rec := range partnerRecommendations {
+		if userRecMap[rec.Name] != nil {
+			n, err := mgr.GetName(rec.Name, names.GetGender(rec.Gender))
+			if err != nil {
+				log.Errorf(mgr.ctx, "action=GetShortList step=retriveName error=%v", err)
+				return nil, err
+			}
+			intersectList = append(intersectList, n)
+		}
+	}
+
+	return intersectList, nil
+}

@@ -102,8 +102,8 @@ func readLines(file *os.File) ([][]string, error) {
 func convertLinesToStat(ctx context.Context, lines [][]string, year int) {
 
 	wg := &sync.WaitGroup{}
-	var maxOps = 50
-	sem := make(chan bool, maxOps)
+	//var maxOps = 50
+	//sem := make(chan bool, maxOps)
 
 	for _, line := range lines {
 		wg.Add(1)
@@ -127,9 +127,9 @@ func convertLinesToStat(ctx context.Context, lines [][]string, year int) {
 			} else {
 				log.Debugf(ctx, "action=convertLinesToStat stat=%v", stat)
 			}
-			sem <- true
+			//sem <- true
 		}(ctx, line, year)
-		<-sem
+		//<-sem
 	}
 
 	//for i := 0; i < cap(sem); i++ {

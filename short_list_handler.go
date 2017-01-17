@@ -3,12 +3,13 @@ package babynamer
 import (
 	"net/http"
 
+	"github.com/AndyNortrup/baby-namer/names"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 )
 
 type ShortListPage struct {
-	NameList ShortList
+	NameList names.NameList
 }
 
 func handleShortList(w http.ResponseWriter, r *http.Request) {

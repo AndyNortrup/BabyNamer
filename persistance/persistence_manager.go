@@ -25,4 +25,7 @@ type DataManager interface {
 
 	//UpdateDecision get public
 	UpdateDecision(*decision.Recommendation) error
+
+	//GetShortList returns a list of all of the names that the user and partner have both agreed too.
+	GetShortList(user, partner *user.User) (names.NameList, error)
 }
