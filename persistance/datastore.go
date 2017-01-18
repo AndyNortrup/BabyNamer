@@ -2,6 +2,7 @@ package persist
 
 import (
 	"errors"
+	"fmt"
 	"github.com/AndyNortrup/baby-namer/names"
 	"github.com/AndyNortrup/baby-namer/recommendation"
 	"golang.org/x/net/context"
@@ -27,7 +28,8 @@ const filterRandomNumber string = "Random >="
 const filterRecommendationUser string = "Email ="
 const filterRecommendationBool string = "Recommended ="
 const filterStatsNameKey string = "NameKey ="
-const filterStatYear string = "Year ="
+const sortOrderRandom string = "Random"
+const chunkSize int = 100
 
 var NoRandomName = errors.New("No random name returned.")
 var NoNameFound = errors.New("Requested name not found.")
@@ -62,10 +64,8 @@ func (mgr *DatastorePersistenceManager) GetName(name string, gender names.Gender
 
 func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*names.Name, error) {
 	rnd := randomFloat()
-	query := datastore.NewQuery(entityTypeName).
-		Filter(filterGenderEquals, gender.GoString()).
-		Filter(filterRandomNumber, rnd).
-		Limit(1)
+	//rndChar := randomStartChar()
+	query := buildRandomNameQuery(gender, rnd, mgr)
 
 	results, _, err := mgr.executeGetNameQuery(query)
 	if err != nil {
@@ -77,6 +77,19 @@ func (mgr *DatastorePersistenceManager) GetRandomName(gender names.Gender) (*nam
 		return nil, NoRandomName
 	}
 	return results[0], err
+}
+
+func buildRandomNameQuery(gender names.Gender, rnd float32, mgr *DatastorePersistenceManager) *datastore.Query {
+	return datastore.NewQuery(entityTypeName).
+		Filter(filterGenderEquals, gender.GoString()).
+		Order(sortOrderRandom).
+		Filter(filterRandomNumber, rnd).
+		Limit(chunkSize).
+		Offset(mgr.randomOffset(chunkSize)).Limit(1)
+}
+
+func (mgr *DatastorePersistenceManager) randomOffset(chunkSize int) int {
+	return rand.New(rand.NewSource(time.Now().Unix())).Intn(chunkSize)
 }
 
 //AddName writes a name to the datastore. It always overwrites a previous entity with the same key (Name::Gender)
@@ -261,6 +274,11 @@ func (mgr *DatastorePersistenceManager) putStat(key *datastore.Key, dStat *datas
 
 func randomFloat() float32 {
 	return rand.New(rand.NewSource(time.Now().Unix())).Float32()
+}
+
+// randomStartChar returns a random start character to be used to spread out the randomization of name sleection
+func randomStartChar() string {
+	return fmt.Sprintf("%x", rand.New(rand.NewSource(time.Now().Unix())).Intn(26))
 }
 
 func (mgr *DatastorePersistenceManager) GetNameRecommendations(
