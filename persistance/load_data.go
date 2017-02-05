@@ -31,7 +31,6 @@ func LoadNames(ctx context.Context, dir string) {
 
 	input := make(chan *names.Name)
 
-	//Try 4 because we have four cores
 	go receiveNames(ctx, input)
 
 	for _, file := range files {
@@ -40,7 +39,7 @@ func LoadNames(ctx context.Context, dir string) {
 			urlVal := url.Values{}
 			urlVal.Add(formValueFilePath, statsFile)
 			t := taskqueue.NewPOSTTask(HandleReadStatsTask, urlVal)
-			_, err := taskqueue.Add(ctx, t, "")
+			_, err := taskqueue.Add(ctx, t, "loaddata")
 			if err != nil {
 				log.Errorf(ctx, "action=LoadNames task_name=%v error=%v", statsFile, err)
 			} else {
@@ -52,6 +51,23 @@ func LoadNames(ctx context.Context, dir string) {
 
 	wg.Wait()
 	close(input)
+}
+
+func deleteNamesAndStats(ctx context.Context) error {
+	//Delete existing names and stats
+	err := deleteNameData(ctx)
+	if err != nil {
+		log.Errorf(ctx, "method=load_names, action=delete_names, error=%v", err)
+		return err
+	}
+
+	err = deleteStatsData(ctx)
+	if err != nil {
+		log.Errorf(ctx, "method=load_names, action=delete_stats, error=%v", err)
+		return err
+	}
+
+	return nil
 }
 
 func readStatsFile(ctx context.Context, path string) {
@@ -66,7 +82,6 @@ func readStatsFile(ctx context.Context, path string) {
 		return
 	}
 
-	year, err := convertFileNameToYear(file.Name())
 	if err != nil {
 		log.Errorf(ctx, "Error: %v", err)
 		return
@@ -78,18 +93,13 @@ func readStatsFile(ctx context.Context, path string) {
 		return
 	}
 
-	convertLinesToStat(ctx, lines, year)
+	convertLinesToStat(ctx, lines)
 	log.Infof(ctx, "action=readStatsFile status=finished_import file=%v", path)
-}
-
-func convertFileNameToYear(p string) (int, error) {
-	_, file := path.Split(p)
-	return strconv.Atoi(file[3:7])
 }
 
 func readLines(file *os.File) ([][]string, error) {
 	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = 4
+	reader.FieldsPerRecord = 5
 	return reader.ReadAll()
 }
 
@@ -98,47 +108,39 @@ func readLines(file *os.File) ([][]string, error) {
 // [0] = Name
 // [1] = Gender (M/F)
 // [2] = Number of occurrences that year
+// [3] = Rank for that year
+// [4] = Year
 
-func convertLinesToStat(ctx context.Context, lines [][]string, year int) {
+func convertLinesToStat(ctx context.Context, lines [][]string) {
 
 	wg := &sync.WaitGroup{}
-	//var maxOps = 50
-	//sem := make(chan bool, maxOps)
 
 	for _, line := range lines {
 		wg.Add(1)
 
-		go func(ctx context.Context, line []string, year int) {
+		go func(ctx context.Context, line []string) {
 			defer wg.Done()
 			name := names.NewName(line[0], names.GetGender(line[1]))
-			stat := extractStatFromLine(line, year)
-			name.AddStat(stat)
+			stat := extractStatFromLine(line)
+			dStat := NewDatastoreStat(name, *stat)
 
 			dName := newDatastoreName(name)
 			_, err := nds.Put(ctx, datastore.NewKey(ctx, entityTypeName, name.Key(), 0, nil), dName)
 			if err != nil {
 				log.Errorf(ctx, "action=convertLinesToStat err=%v", err)
 			}
-			_, err = nds.Put(ctx,
-				datastore.NewKey(ctx, entityTypeStats, name.Key()+"::"+strconv.Itoa(stat.Year), 0, nil),
-				stat)
+			_, err = nds.Put(ctx, dStat.newStatKey(ctx), dStat)
 			if err != nil {
 				log.Errorf(ctx, "action=convertLinesToStat err=%v", err)
-			} else {
-				log.Debugf(ctx, "action=convertLinesToStat stat=%v", stat)
 			}
-			//sem <- true
-		}(ctx, line, year)
-		//<-sem
+		}(ctx, line)
 	}
-
-	//for i := 0; i < cap(sem); i++ {
-	//	<-sem
-	//}
 
 	wg.Wait()
 }
-func extractStatFromLine(line []string, year int) *names.Stat {
+
+func extractStatFromLine(line []string) *names.Stat {
+	year, _ := strconv.Atoi(line[4])
 	occurrence := extractOccurrences(line)
 	rank := extractRank(line)
 	stat := names.NewNameStat(year, rank, occurrence)
@@ -174,9 +176,6 @@ func receiveNames(ctx context.Context, in <-chan *names.Name) {
 		_, err := nds.Put(ctx, key, dName)
 		if err != nil {
 			log.Errorf(ctx, "Action:load_data: %v", err)
-		} else {
-			log.Infof(ctx, "Action:receiveNames name:%v\t year:%v\t rank: %v", name.Name,
-				name.SortedStats()[0].Year, name.SortedStats()[0].Rank)
 		}
 	}
 	log.Infof(ctx, "--------------Finished importing names!-----------------")

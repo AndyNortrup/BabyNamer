@@ -2,7 +2,6 @@ package babynamer
 
 import (
 	"github.com/AndyNortrup/baby-namer/names"
-	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/AndyNortrup/baby-namer/settings"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
@@ -17,13 +16,13 @@ type SuggestionPage struct {
 	HighestRank     *names.Stat
 	Gender          string
 	usr             *user.User
-	data            persist.DataManager
+	data            DataManager
 	lastName        *names.Name
 	IsRecommended   bool
 }
 
 func NewSuggestionPage(u *user.User,
-	data persist.DataManager,
+	data DataManager,
 	ctx context.Context,
 	lastName *names.Name) *SuggestionPage {
 	sp := &SuggestionPage{usr: u, data: data, ctx: ctx, lastName: lastName}
@@ -91,10 +90,12 @@ func (sp *SuggestionPage) randomName() (*names.Name, error) {
 			log.Errorf(sp.ctx, err.Error())
 			return nil, err
 		}
+
 		recs, err := sp.data.GetNameRecommendations(sp.usr, name)
 		if err != nil {
 			return nil, err
 		}
+
 		if len(recs) == 0 {
 			return name, err
 		}

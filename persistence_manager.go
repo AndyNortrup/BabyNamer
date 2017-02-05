@@ -1,10 +1,16 @@
-package persist
+package babynamer
 
 import (
 	"github.com/AndyNortrup/baby-namer/names"
+	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/AndyNortrup/baby-namer/recommendation"
+	"golang.org/x/net/context"
 	"google.golang.org/appengine/user"
 )
+
+func newDataManager(ctx context.Context) DataManager {
+	return persist.NewDatastoreManager(ctx)
+}
 
 type DataManager interface {
 	//GetName retrieves a specific name and all of it's stats from the store

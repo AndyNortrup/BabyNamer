@@ -2,7 +2,6 @@ package babynamer
 
 import (
 	"github.com/AndyNortrup/baby-namer/names"
-	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/gorilla/mux"
 	"github.com/wcharczuk/go-chart"
 	"golang.org/x/net/context"
@@ -105,7 +104,7 @@ func handleChart(w http.ResponseWriter, r *http.Request) {
 	log.Infof(ctx, "Action=StatsChart Name=%v Gender=%s", nameStr, gender.GoString())
 
 	//get name from Datastore
-	data := persist.NewDatastoreManager(ctx)
+	data := newDataManager(ctx)
 	name, err := data.GetName(nameStr, gender)
 
 	if err != nil {

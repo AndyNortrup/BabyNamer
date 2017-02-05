@@ -37,7 +37,7 @@ func TestGetName(t *testing.T) {
 		}
 		checkResults(index, input[index], result, t)
 	}
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }
 
 func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
@@ -67,7 +67,7 @@ func TestDatastorePersistenceManager_GetRandomName(t *testing.T) {
 		t.Log("No random name returned.")
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }
 
 func checkResults(idx int, name string, result *names.Name, t *testing.T) {
@@ -151,7 +151,7 @@ func TestDatastorePersistenceManager_UpdateDecision(t *testing.T) {
 		t.FailNow()
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }
 
 func getAllRecommendations(ctx context.Context) ([]*decision.Recommendation, error) {
@@ -194,7 +194,7 @@ func TestDataStorePersistenceManager_GetUserRecommendations(t *testing.T) {
 		t.FailNow()
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 	ctx.Done()
 }
 
@@ -244,7 +244,7 @@ func TestDatastorePersistenceManager_GetRecommendedNames(t *testing.T) {
 		t.FailNow()
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 	ctx.Done()
 }
 
@@ -293,7 +293,7 @@ func TestDatastorePersistenceManager_addStat(t *testing.T) {
 		t.FailNow()
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }
 
 func TestDatastorePersistanceManager_GetNameRecommendations(t *testing.T) {
@@ -328,7 +328,7 @@ func TestDatastorePersistanceManager_GetNameRecommendations(t *testing.T) {
 		t.FailNow()
 	}
 
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }
 
 func TestDatastorePersistenceManager_GetShortList(t *testing.T) {
@@ -383,5 +383,5 @@ func TestDatastorePersistenceManager_GetShortList(t *testing.T) {
 		t.Logf("Wrong name returned.  Expected=%v, Recieved=%v", onTheList.Name, shortList[0].Name)
 		t.FailNow()
 	}
-	clearDatastore(ctx)
+	ClearDatastore(ctx)
 }

@@ -2,7 +2,6 @@ package babynamer
 
 import (
 	"github.com/AndyNortrup/baby-namer/names"
-	"github.com/AndyNortrup/baby-namer/persistance"
 	"github.com/AndyNortrup/baby-namer/settings"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
@@ -31,7 +30,7 @@ func getShortList(ctx context.Context) (names.NameList, error) {
 }
 
 func getPersistenceShortList(ctx context.Context) (names.NameList, error) {
-	mgr := persist.NewDatastoreManager(ctx)
+	mgr := newDataManager(ctx)
 	usr := user.Current(ctx)
 	partner, err := settings.GetPartner(ctx, usr)
 	if err != nil {
